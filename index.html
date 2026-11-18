@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title></title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+/* ── Animated gradient background (index only) ── */
+body {
+  background: #0d0d20;
+  overflow-x: hidden;
+}
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+/* Orb 1 — ungu dalam, kiri atas */
+body::before {
+  width: 640px;
+  height: 520px;
+  background: radial-gradient(ellipse at center, #2d1b6e55 0%, #1e1050 40%, transparent 70%);
+  filter: blur(72px);
+  top: -160px;
+  left: -120px;
+  animation: orbDrift1 22s ease-in-out infinite alternate;
+}
+/* Orb 2 — biru-ungu, kanan bawah */
+body::after {
+  width: 560px;
+  height: 460px;
+  background: radial-gradient(ellipse at center, #1a2d6055 0%, #0f1a3e 40%, transparent 70%);
+  filter: blur(80px);
+  bottom: -120px;
+  right: -100px;
+  animation: orbDrift2 28s ease-in-out infinite alternate;
+}
+@keyframes orbDrift1 {
+  0%   { transform: translate(0px,   0px);   opacity: .55; }
+  30%  { transform: translate(180px, 120px); opacity: .65; }
+  65%  { transform: translate(80px,  260px); opacity: .50; }
+  100% { transform: translate(240px, 180px); opacity: .60; }
+}
+@keyframes orbDrift2 {
+  0%   { transform: translate(0px,    0px);   opacity: .50; }
+  40%  { transform: translate(-160px,-100px); opacity: .60; }
+  70%  { transform: translate(-80px, -220px); opacity: .45; }
+  100% { transform: translate(-200px,-130px); opacity: .55; }
+}
+/* Pastikan konten di atas orb */
+.wrap { position: relative; z-index: 1; }
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <section class="hero">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M11 9h4a2 2 0 0 0 2-2V3"/><circle cx="9" cy="9" r="2"/><path d="M7 21v-4a2 2 0 0 1 2-2h4"/><circle cx="15" cy="15" r="2"/></svg>
+    <h1>Pembelajaran Arsitektur dan Organisasi Komputer</h1>
+    <button class="btn" id="startBtn" type="button">Mulai Pembelajaran</button>
+    <p class="desc">Jelajahi simulasi interaktif untuk mempelajari dan memahami cara kerja CPU, siklus instruksi, hierarki memori, perangkat input dan output (I/O), serta proses perpindahan data antar komponen komputer melalui visualisasi yang informatif dan mudah dipahami.</p>
+  </section>
+
+  <section id="materi" aria-label="Materi simulasi">
+    <label class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="search" id="q" placeholder="Cari materi" aria-label="Cari materi">
+    </label>
+
+    <div class="acc" id="acc-hw">
+      <button type="button" aria-expanded="false">
+        <span class="dot"></span>
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4" stroke-linecap="round"/></svg>
+        <span>Hardware</span>
+      </button>
+      <div class="acc-preview" aria-hidden="true">
+        <p class="acc-preview-title">ketik untuk materi lanjut</p>
+        <ul class="acc-preview-list" id="prev-hw"></ul>
+      </div>
+      <ul>
+        <li><a href="materi.html?id=cpu"><b>CPU</b>Unit pemroses pusat: ALU, unit kendali, dan register.</a></li>
+        <li><a href="materi.html?id=motherboard"><b>Motherboard (MOBO)</b>Papan sirkuit utama penghubung seluruh komponen komputer.</a></li>
+        <li><a href="materi.html?id=ram"><b>RAM</b>Memori utama untuk menyimpan data dan program sementara.</a></li>
+        <li><a href="materi.html?id=kipas"><b>Kipas (Cooling Fan)</b>Sistem pendingin untuk menjaga kestabilan suhu komponen.</a></li>
+        <li><a href="materi.html?id=hdd"><b>HDD</b>Media penyimpanan data magnetik berkapasitas besar dan permanen.</a></li>
+        <li><a href="materi.html?id=ssd-m2"><b>SSD M.2</b>Penyimpanan berkecepatan tinggi tanpa bagian bergerak pada motherboard.</a></li>
+        <li><a href="materi.html?id=psu"><b>Power Supply Unit (PSU)</b>Unit pengubah arus AC menjadi daya DC untuk komponen.</a></li>
+      </ul>
+    </div>
+
+    <div class="acc" id="acc-sim">
+      <button type="button" aria-expanded="false">
+        <span class="dot"></span>
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="12" rx="1.5"></rect><path d="M8 20h8M12 16v4"></path></svg>
+        <span>Simulasi Merakit Komputer</span>
+      </button>
+      <div class="acc-preview" aria-hidden="true">
+        <p class="acc-preview-title">ketik untuk materi lanjut</p>
+        <ul class="acc-preview-list" id="prev-sim"></ul>
+      </div>
+      <ul>
+        <li><a href="Simulasi/CPU.HTML"><b>Pemasangan CPU</b>Simulasi interaktif 3D langkah pemasangan prosesor pada soket motherboard.</a></li>
+        <li><a href="Simulasi/RAM.HTML"><b>Pemasangan RAM</b>Simulasi interaktif 3D langkah pemasangan modul memori pada slot RAM motherboard.</a></li>
+        <li><a href="Simulasi/GPU.HTML"><b>Pemasangan GPU</b>Simulasi interaktif 3D langkah pemasangan kartu grafis pada slot PCIe motherboard.</a></li>
+        <li><a href="Simulasi/SSD.HTML"><b>Pemasangan SSD</b>Simulasi interaktif 3D langkah pemasangan SSD pada slot PCIe motherboard.</a></li>
+        <li><a href="Simulasi/CPUCOOLING.html"><b>Pemasangan Kipas CPU</b>Simulasi interaktif 3D langkah pemasangan kipas pendingin prosesor pada motherboard.</a></li>
+      </ul>
+    </div>
+
+    <div class="acc" id="acc-lain">
+      <button type="button" aria-expanded="false">
+        <span class="dot"></span>
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <span>Materi lainnya</span>
+      </button>
+      <div class="acc-preview" aria-hidden="true">
+        <p class="acc-preview-title">ketik untuk materi lanjut</p>
+        <ul class="acc-preview-list" id="prev-lain"></ul>
+      </div>
+      <ul>
+        <li><a href="materi.html?id=io"><b>Perangkat Input dan Output (I/O)</b>Simulasi interaktif 3D perangkat input dan output komputer.</a></li>
+        <li><a href="materi.html?id=memori"><b>Hierarki Memori</b>Simulasi interaktif 3D hierarki memori komputer.</a></li>
+        <li><a href="materi.html?id=siklus"><b>Siklus Instruksi</b>Simulasi interaktif 3D siklus instruksi komputer.</a></li>
+      </ul>
+    </div>
+    <button type="button" class="reset" id="resetBtn">Reset kemajuan</button>
+    <p class="empty" id="empty">Materi tidak ditemukan. Coba kata kunci lain.</p>
+  </section>
+
+  <hr>
+
+  <section aria-label="Profil kelompok">
+    <h2>Profil Kelompok</h2>
+    <div class="team">
+      <div>
+        <p class="label">TIM PENGEMBANG</p>
+        <h3>Kelompok 6</h3>
+        <p>Kelompok pengembang media simulasi pembelajaran Arsitektur dan Organisasi Komputer.</p>
+      </div>
+      <div class="right">
+        <div><p class="label dim">PROGRAM STUDI</p><strong>Pendidikan Multimedia</strong></div>
+        <div><p class="label dim">UNIVERSITAS</p><strong>Universitas Pendidikan Indonesia</strong></div>
+      </div>
+    </div>
+
+    <h4>Anggota Kelompok</h4>
+    <div class="members" id="members"></div>
+  </section>
+
+</main>
+
+<script src="data.js"></script>
+<script src="script.js"></script>
+<script>
+/* Isi preview list dari item accordion masing-masing */
+(function(){
+  const map = [
+    { acc: document.getElementById('acc-hw'),   prev: document.getElementById('prev-hw') },
+    { acc: document.getElementById('acc-sim'),  prev: document.getElementById('prev-sim') },
+    { acc: document.getElementById('acc-lain'), prev: document.getElementById('prev-lain') }
+  ];
+  map.forEach(function(m){
+    if(!m.acc || !m.prev) return;
+    var items = m.acc.querySelectorAll(':scope > ul > li');
+    items.forEach(function(li){
+      var b   = li.querySelector('b');
+      var a   = li.querySelector('a');
+      if(!b) return;
+      var newLi = document.createElement('li');
+      if(a && a.href && !a.classList.contains('terkunci')){
+        var link = document.createElement('a');
+        link.href      = a.href;
+        link.textContent = b.textContent;
+        link.className = 'prev-link';
+        newLi.appendChild(link);
+      } else {
+        newLi.textContent = b.textContent;
+        newLi.style.opacity = '.45';
+      }
+      m.prev.appendChild(newLi);
+    });
+  });
+})();
+
+/* Proximity expand untuk search box */
+(function(){
+  var searchEl = document.querySelector('.search');
+  if(!searchEl) return;
+
+  var NEAR = 110;      /* jarak (px) mulai bereaksi */
+  var MIN_W = 240;     /* lebar awal (px) */
+  var expanded = false;
+
+  function distToRect(mx, my, r){
+    var dx = Math.max(r.left - mx, 0, mx - r.right);
+    var dy = Math.max(r.top  - my, 0, my - r.bottom);
+    return Math.sqrt(dx*dx + dy*dy);
+  }
+
+  document.addEventListener('mousemove', function(e){
+    var rect = searchEl.getBoundingClientRect();
+    var dist = distToRect(e.clientX, e.clientY, rect);
+
+    if(dist < NEAR && !expanded){
+      expanded = true;
+      searchEl.style.maxWidth = '100%';
+    } else if(dist >= NEAR && expanded){
+      expanded = false;
+      searchEl.style.maxWidth = MIN_W + 'px';
+    }
+  });
+})();
+</script>
+</body>
+</html>

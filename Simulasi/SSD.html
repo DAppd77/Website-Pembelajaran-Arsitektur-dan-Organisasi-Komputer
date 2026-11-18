@@ -1,0 +1,2361 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulasi 3D: Pemasangan SSD M.2 NVMe ke Motherboard</title>
+  <!-- Tailwind CSS untuk tata letak UI yang bersih dan responsif -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Three.js r128 untuk rendering 3D interaktif -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- Google Font Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Inter', sans-serif;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #090d16;
+      color: #f1f5f9;
+    }
+    #canvas-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: default;
+    }
+    #canvas-container canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+    }
+    /* Custom scrollbar halus untuk panel samping */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(71, 85, 105, 0.8);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 1);
+    }
+  </style>
+</head>
+<body class="flex flex-col md:flex-row h-screen w-screen overflow-hidden bg-slate-950 text-slate-100 select-none">
+
+  <!-- ===================================================================== -->
+  <!-- AREA VIEWPORT 3D UTAMA (MEJA KERJA, MOTHERBOARD MASTER & SSD M.2)     -->
+  <!-- ===================================================================== -->
+  <main class="relative flex-1 h-[55vh] md:h-full w-full overflow-hidden bg-gradient-to-b from-slate-900 via-slate-950 to-black">
+    <div id="canvas-container"></div>
+
+    <!-- Header Overlay Kiri Atas -->
+    <div class="absolute top-3 left-3 sm:top-4 sm:left-4 pointer-events-none flex flex-col gap-1.5 max-w-[88%] sm:max-w-md z-10">
+      <div class="flex items-center gap-2 pointer-events-auto">
+        <a href="../index.html#rakit" class="inline-flex items-center gap-1.5 bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 hover:border-sky-500/50 px-2.5 py-1 rounded-xl text-xs font-medium text-slate-300 hover:text-white transition shadow-lg active:scale-95" title="Kembali ke Beranda">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+          <span>Kembali</span>
+        </a>
+        <div class="inline-flex items-center gap-2 bg-slate-900/90 backdrop-blur-md border border-sky-500/40 px-3 py-1 rounded-xl shadow-lg w-fit">
+          <span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
+          <span class="text-[11px] font-semibold tracking-wider uppercase text-sky-300">Tahap 4 • Perakitan Hardware</span>
+        </div>
+      </div>
+      <h1 class="text-base sm:text-xl font-bold text-white drop-shadow">
+        Pemasangan SSD M.2 NVMe ke Motherboard
+      </h1>
+      <!-- Petunjuk Langkah Aktif Real-Time -->
+      <div id="live-instruction-pill" class="inline-flex items-center gap-2 text-xs text-amber-200 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-amber-500/40 shadow-md w-fit">
+        <span class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
+        <span id="live-instruction-text">Klik Slot M.2 pada motherboard untuk melepas heatsink pendingin.</span>
+      </div>
+    </div>
+
+    <!-- Banner Hitung Mundur 3 Detik Setelah SSD Terpasang Sempurna -->
+    <div id="countdown-banner" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20">
+      <div class="bg-slate-900/95 border-2 border-emerald-400/80 backdrop-blur-xl px-6 py-4 rounded-2xl shadow-2xl text-center">
+        <div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-400 text-emerald-300 font-bold text-lg mb-2" id="countdown-number">
+          3
+        </div>
+        <h2 class="text-sm sm:text-base font-bold text-emerald-300">SSD M.2 Terpasang Sempurna!</h2>
+        <p class="text-xs text-slate-300 mt-1">Memverifikasi penguncian Q-Latch &amp; heatsink...</p>
+      </div>
+    </div>
+
+    <!-- Tombol Mengambang "Selesaikan Game" saat pengguna memilih "Lihat Hasil Dahulu" -->
+    <div id="inspect-mode-bar" class="hidden absolute top-3 right-3 sm:top-4 sm:right-4 z-20 flex items-center gap-2 bg-slate-900/95 border border-emerald-500/50 backdrop-blur-md px-3 py-2 rounded-2xl shadow-xl">
+      <span class="text-xs text-emerald-300 font-medium hidden sm:inline">Mode Inspeksi Hasil</span>
+      <button id="btn-finish-from-inspect" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow transition active:scale-95">
+        Selesaikan Game
+      </button>
+    </div>
+
+    <!-- Bar Bawah: Preset Sudut Kamera & Petunjuk Navigasi (Bebas Tumpang Tindih) -->
+    <div class="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 flex flex-col xl:flex-row xl:items-center justify-between gap-2 pointer-events-none z-10">
+      <div class="flex flex-wrap items-center gap-1.5 pointer-events-auto">
+        <button data-cam="workbench" class="cam-btn bg-sky-600 text-white border border-sky-400/60 px-2.5 py-1.5 rounded-xl text-xs font-medium shadow-md transition hover:bg-sky-500 active:scale-95">
+          Meja &amp; Komponen
+        </button>
+        <button data-cam="slot" class="cam-btn bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 px-2.5 py-1.5 rounded-xl text-xs font-medium backdrop-blur-md shadow-md transition active:scale-95">
+          Fokus Slot M.2
+        </button>
+        <button data-cam="ssdTray" class="cam-btn bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 px-2.5 py-1.5 rounded-xl text-xs font-medium backdrop-blur-md shadow-md transition active:scale-95">
+          Fokus SSD M.2
+        </button>
+        <button data-cam="topDown" class="cam-btn bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 px-2.5 py-1.5 rounded-xl text-xs font-medium backdrop-blur-md shadow-md transition active:scale-95">
+          Tampak Atas
+        </button>
+      </div>
+
+      <!-- Petunjuk Kontrol Mouse/Sentuh -->
+      <div class="hidden md:flex items-center bg-slate-900/85 backdrop-blur-md border border-slate-800 px-3 py-1.5 rounded-xl text-[11px] text-slate-300 gap-3 w-fit pointer-events-none">
+        <span>🖱️ Klik Slot M.2: Buka/Tutup Bertahap</span>
+        <span>✋ Drag SSD &amp; Heatsink: Pasang ke Slot</span>
+        <span>👀 Gerak Kursor: Geser POV (X/Y)</span>
+      </div>
+    </div>
+
+    <!-- Kotak Pesan / Toast Non-Blocking -->
+    <div id="feedback-toast" class="pointer-events-none absolute top-24 sm:top-4 right-3 sm:right-4 max-w-xs sm:max-w-sm bg-slate-900/95 border border-sky-500/50 text-slate-100 px-3.5 py-2.5 rounded-xl shadow-2xl backdrop-blur-md transition-all duration-300 opacity-0 -translate-y-2 z-20">
+      <div class="flex items-start gap-2.5">
+        <span id="toast-dot" class="mt-1 w-2.5 h-2.5 rounded-full bg-sky-400 shrink-0"></span>
+        <div>
+          <p id="toast-title" class="text-xs font-semibold text-sky-300">Informasi</p>
+          <p id="toast-msg" class="text-xs text-slate-300 mt-0.5 leading-relaxed">Siap merakit.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL PILIHAN SETELAH 3 DETIK SSD TERPASANG SEMPURNA -->
+    <div id="choice-modal" class="hidden absolute inset-0 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 z-30">
+      <div class="bg-slate-900 border border-slate-700/90 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div>
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-emerald-400">Tahap Selesai</span>
+            <h2 class="text-lg font-bold text-white">SSD M.2 Berhasil Terpasang!</h2>
+          </div>
+        </div>
+
+        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+          SSD M.2 NVMe 2280 telah terpasang dengan konektor M-Key yang sejajar, klip Q-Latch terkunci rapat, serta heatsink pendingin terpasang kembali. Apa yang ingin Anda lakukan selanjutnya?
+        </p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <button id="btn-inspect-result" class="w-full py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-600 text-xs sm:text-sm font-semibold transition active:scale-95">
+            Lihat Hasil Dahulu
+          </button>
+          <button id="btn-finish-game" class="w-full py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/50 text-xs sm:text-sm font-semibold shadow-lg shadow-emerald-950/50 transition active:scale-95">
+            Selesaikan Game
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL RINGKASAN SELESAI GAME -->
+    <div id="summary-modal" class="hidden absolute inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-40">
+      <div class="bg-slate-900 border border-emerald-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5">
+        <div class="text-center space-y-2">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center text-emerald-300">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <span class="inline-block text-[11px] font-semibold uppercase tracking-widest text-emerald-400">Simulasi Tahap 4 Tuntas</span>
+          <h2 class="text-xl font-bold text-white">Pemasangan SSD M.2 Selesai</h2>
+          <p class="text-xs text-slate-300">Seluruh prosedur standar perakitan penyimpanan NVMe M.2 2280 telah diselesaikan dengan benar.</p>
+        </div>
+
+        <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 space-y-2 text-xs">
+          <div class="flex items-center justify-between text-slate-300">
+            <span>1. Pelepasan Heatsink &amp; Pembukaan Q-Latch</span>
+            <span class="text-emerald-400 font-semibold">✓ Selesai</span>
+          </div>
+          <div class="flex items-center justify-between text-slate-300">
+            <span>2. Penyelarasan Konektor M-Key 2280</span>
+            <span class="text-emerald-400 font-semibold">✓ Tepat (0°)</span>
+          </div>
+          <div class="flex items-center justify-between text-slate-300">
+            <span>3. Penguncian Q-Latch &amp; Pasang Heatsink</span>
+            <span class="text-emerald-400 font-semibold">✓ Terkunci</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <a href="../index.html#rakit" id="btn-back-home" class="w-full py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold text-center transition active:scale-95 flex items-center justify-center">
+            Kembali ke Menu
+          </a>
+          <button id="btn-restart-sim" class="w-full py-2.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-md transition active:scale-95">
+            Ulangi Simulasi
+          </button>
+          <a href="CPUCOOLING.html" id="btn-next-sim" class="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold text-center shadow-md transition active:scale-95 flex items-center justify-center">
+            Simulasi Selanjutnya [Pemasangan Kipas CPU]
+          </a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- PANEL KONTROL SAMPING (TERBAGI 2 BAGIAN: ORIENTASI & PROSEDUR)         -->
+  <!-- ===================================================================== -->
+  <aside class="w-full md:w-80 lg:w-96 h-[45vh] md:h-full bg-slate-950 border-t md:border-t-0 md:border-l border-slate-800 flex flex-col p-3 sm:p-3.5 gap-3 z-20 shadow-2xl overflow-y-auto">
+
+    <!-- BAGIAN 1: KARTU ORIENTASI SSD M.2 (TEMA KUNING CERAH) -->
+    <section class="bg-gradient-to-br from-amber-500/15 via-slate-900 to-amber-950/20 border-2 border-amber-400/80 rounded-2xl p-3.5 space-y-3 shrink-0 shadow-lg shadow-amber-500/10">
+      <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-amber-400/30">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shadow-sm shadow-amber-300"></span>
+          <div>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-amber-300">1. Orientasi SSD M.2</h2>
+            <p class="text-[11px] text-amber-200/70">NVMe PCIe 5.0 2280 • Motherboard ATX</p>
+          </div>
+        </div>
+        <button id="btn-reset-sim" class="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/50 text-xs font-medium transition active:scale-95">
+          Reset
+        </button>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <span class="text-[11px] font-semibold text-amber-200">Sudut Konektor M-Key:</span>
+        <span id="ssd-angle-badge" class="text-[11px] px-2.5 py-0.5 rounded-full font-bold bg-amber-400 text-slate-950 border border-amber-300 shadow-sm">
+          90° (Belum Sejajar)
+        </span>
+      </div>
+
+      <!-- Diagram Visual Arah Konektor M-Key SSD vs Slot M.2 -->
+      <div class="flex items-center justify-between gap-3 bg-slate-950/90 border border-amber-400/40 rounded-xl p-3 shadow-inner">
+        <div class="space-y-1">
+          <p class="text-xs font-bold text-amber-300">Penyelarasan Pin M-Key</p>
+          <p class="text-[11px] text-slate-300 leading-relaxed">
+            Putar SSD hingga ujung <span class="text-amber-300 font-bold underline decoration-amber-400">Pin Emas M-Key</span> menghadap ke <span class="text-white font-semibold">kiri (soket M.2)</span> dan takik Q-Latch di kanan (<span class="text-emerald-300 font-medium">orientasi 0°</span>).
+          </p>
+        </div>
+        <!-- Mini Indikator Visual Arah SSD M.2 2280 -->
+        <div class="relative w-16 h-16 rounded-lg bg-amber-950/40 border border-amber-400/50 shrink-0 flex items-center justify-center shadow-inner overflow-hidden">
+          <div id="orientation-ssd-visual" class="w-12 h-4 rounded-sm bg-slate-800 border-2 border-amber-400 flex items-center justify-between px-0.5 transition-transform duration-300 shadow-sm" style="transform: rotate(90deg);">
+            <!-- Pin Emas M-Key di sisi kiri saat 0° -->
+            <span class="w-1.5 h-3 bg-amber-400 rounded-xs shrink-0"></span>
+            <span class="text-[7px] font-bold text-slate-300 tracking-tighter">NVMe</span>
+            <!-- Takik setengah lingkaran di sisi kanan saat 0° -->
+            <span class="w-1.5 h-1.5 rounded-full bg-slate-950 border border-slate-500 shrink-0"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tombol Putar Orientasi Kiri / Kanan -->
+      <div class="grid grid-cols-2 gap-2">
+        <button id="btn-rotate-ccw" class="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-100 border border-amber-400/60 text-xs font-semibold transition active:scale-95 disabled:opacity-40 disabled:pointer-events-none shadow-sm">
+          <svg class="w-4 h-4 text-amber-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+          </svg>
+          Putar Kiri (-90°)
+        </button>
+        <button id="btn-rotate-cw" class="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-100 border border-amber-400/60 text-xs font-semibold transition active:scale-95 disabled:opacity-40 disabled:pointer-events-none shadow-sm">
+          Putar Kanan (+90°)
+          <svg class="w-4 h-4 text-amber-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 10H11a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6" />
+          </svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- BAGIAN 2: KARTU PROSEDUR PERAKITAN (DAPAT DITUTUP/DIBUKA) -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex flex-col flex-1 min-h-0 shadow-lg">
+      <button id="btn-toggle-procedure" type="button" aria-expanded="true" class="w-full flex items-center justify-between text-left focus:outline-none group">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <h3 class="text-xs font-bold uppercase tracking-wider text-white group-hover:text-emerald-300 transition">2. Prosedur Perakitan</h3>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="step-progress-text" class="text-[11px] font-mono text-slate-400">0 / 5</span>
+          <span class="w-6 h-6 rounded-lg bg-slate-800 group-hover:bg-slate-700 border border-slate-700/80 flex items-center justify-center text-slate-300 transition">
+            <svg id="procedure-chevron" class="w-3.5 h-3.5 transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </span>
+        </div>
+      </button>
+
+      <div id="procedure-content" class="mt-3 pt-3 border-t border-slate-800/80 overflow-y-auto pr-0.5">
+        <ol class="space-y-2 text-xs">
+          <li id="step-item-1" class="flex items-start gap-2.5 p-2 rounded-xl bg-sky-500/10 border border-sky-500/40 text-slate-100">
+            <span class="step-badge w-5 h-5 rounded-full bg-sky-500 text-slate-950 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">1</span>
+            <div>
+              <p class="font-semibold">Lepas Heatsink Pendingin M.2</p>
+              <p class="text-[11px] text-slate-400">Klik slot M.2 untuk melepas heatsink ke dudukan bawah SSD.</p>
+            </div>
+          </li>
+
+          <li id="step-item-2" class="flex items-start gap-2.5 p-2 rounded-xl bg-slate-950/70 border border-slate-800 text-slate-400">
+            <span class="step-badge w-5 h-5 rounded-full bg-slate-800 text-slate-400 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">2</span>
+            <div>
+              <p class="font-semibold">Buka Klip Pengunci M.2 (Q-Latch)</p>
+              <p class="text-[11px] text-slate-500">Klik kembali slot M.2 untuk memutar pengunci ujung slot.</p>
+            </div>
+          </li>
+
+          <li id="step-item-3" class="flex items-start gap-2.5 p-2 rounded-xl bg-slate-950/70 border border-slate-800 text-slate-400">
+            <span class="step-badge w-5 h-5 rounded-full bg-slate-800 text-slate-400 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">3</span>
+            <div>
+              <p class="font-semibold">Sejajarkan &amp; Drag SSD ke Slot M.2</p>
+              <p class="text-[11px] text-slate-500">Atur orientasi 0°, lalu klik &amp; seret SSD M.2 ke soket.</p>
+            </div>
+          </li>
+
+          <li id="step-item-4" class="flex items-start gap-2.5 p-2 rounded-xl bg-slate-950/70 border border-slate-800 text-slate-400">
+            <span class="step-badge w-5 h-5 rounded-full bg-slate-800 text-slate-400 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">4</span>
+            <div>
+              <p class="font-semibold">Kunci Klip Q-Latch M.2</p>
+              <p class="text-[11px] text-slate-500">Klik slot M.2 untuk mengunci ujung SSD pada dudukan standoff.</p>
+            </div>
+          </li>
+
+          <li id="step-item-5" class="flex items-start gap-2.5 p-2 rounded-xl bg-slate-950/70 border border-slate-800 text-slate-400">
+            <span class="step-badge w-5 h-5 rounded-full bg-slate-800 text-slate-400 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">5</span>
+            <div>
+              <p class="font-semibold">Pasang Kembali Heatsink M.2</p>
+              <p class="text-[11px] text-slate-500">Klik &amp; seret (drag) heatsink dari bawah SSD ke atas slot M.2.</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+  </aside>
+
+  <script>
+    /**
+     * ============================================================================
+     * 1. GENERATOR TEKSTUR PROSEDURAL (KONSISTEN DENGAN MASTER BLUEPRINT)
+     * ============================================================================
+     */
+    class ProceduralTextures {
+      static createPCBTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 1280;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#131720';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < canvas.width; i += 8) {
+          ctx.beginPath();
+          ctx.moveTo(i, 0);
+          ctx.lineTo(i, canvas.height);
+          ctx.stroke();
+        }
+        for (let j = 0; j < canvas.height; j += 8) {
+          ctx.beginPath();
+          ctx.moveTo(0, j);
+          ctx.lineTo(canvas.width, j);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = '#1e2636';
+        ctx.lineWidth = 2.5;
+
+        for (let i = 0; i < 18; i++) {
+          const yStart = 230 + i * 11;
+          ctx.beginPath();
+          ctx.moveTo(540, yStart);
+          ctx.lineTo(595, yStart - 18);
+          ctx.lineTo(665, yStart - 18);
+          ctx.stroke();
+        }
+
+        for (let i = 0; i < 16; i++) {
+          const xStart = 350 + i * 10;
+          ctx.beginPath();
+          ctx.moveTo(xStart, 415);
+          ctx.lineTo(xStart - 12, 480);
+          ctx.lineTo(xStart - 12, 680);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.16)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(80, 960);
+        ctx.lineTo(340, 1180);
+        ctx.lineTo(940, 1180);
+        ctx.stroke();
+
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = 'bold 24px Inter, sans-serif';
+        ctx.fillText('INTEL ATX-Z790 MASTER', 110, 920);
+
+        ctx.font = '600 14px monospace';
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText('REV 1.0 • DESIGNED FOR 3D SIMULATION', 110, 944);
+
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = 'bold 13px monospace';
+        ctx.fillText('LGA 1700 / 1851', 395, 192);
+        ctx.fillText('DIMM_A1  A2  B1  B2', 662, 130);
+        ctx.fillText('M.2_1 (SOCKET 3) PCIe 5.0 x4', 285, 535);
+        ctx.fillText('PCIEX16 (GEN 5.0)', 235, 675);
+        ctx.fillText('PCIEX4_1', 235, 825);
+        ctx.fillText('PCIEX1_1', 235, 965);
+        ctx.fillText('ATX_PWR 24-PIN', 855, 385);
+        ctx.fillText('CPU_PWR 8+8', 180, 42);
+        ctx.fillText('SATA6G_1-4', 865, 1115);
+        ctx.fillText('F_PANEL', 780, 1235);
+
+        const mountingHoles = [
+          [48, 52], [512, 52], [965, 52],
+          [48, 635], [512, 635], [965, 635],
+          [48, 1210], [512, 1210], [965, 1210]
+        ];
+        mountingHoles.forEach(([hx, hy]) => {
+          ctx.beginPath();
+          ctx.arc(hx, hy, 15, 0, Math.PI * 2);
+          ctx.fillStyle = '#d4af37';
+          ctx.fill();
+
+          for (let a = 0; a < 8; a++) {
+            const rad = (a / 8) * Math.PI * 2;
+            ctx.beginPath();
+            ctx.arc(hx + Math.cos(rad) * 11, hy + Math.sin(rad) * 11, 1.8, 0, Math.PI * 2);
+            ctx.fillStyle = '#1e293b';
+            ctx.fill();
+          }
+
+          ctx.beginPath();
+          ctx.arc(hx, hy, 7, 0, Math.PI * 2);
+          ctx.fillStyle = '#090d14';
+          ctx.fill();
+        });
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.anisotropy = 8;
+        return texture;
+      }
+
+      static createLGAPinsTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#18181b';
+        ctx.fillRect(0, 0, 512, 512);
+
+        const step = 7;
+        for (let y = 24; y < 488; y += step) {
+          for (let x = 24; x < 488; x += step) {
+            if (x > 195 && x < 317 && y > 185 && y < 327) continue;
+            ctx.fillStyle = (x + y) % 14 === 0 ? '#facc15' : '#ca8a04';
+            ctx.fillRect(x, y, 3.5, 3.5);
+          }
+        }
+
+        ctx.fillStyle = '#27272a';
+        ctx.fillRect(200, 190, 112, 132);
+        ctx.fillStyle = '#92400e';
+        for (let cy = 205; cy < 310; cy += 18) {
+          for (let cx = 212; cx < 300; cx += 22) {
+            ctx.fillRect(cx, cy, 12, 7);
+          }
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.anisotropy = 8;
+        return texture;
+      }
+
+      static createBrushedMetalTexture(baseHex = '#272e3b', lineHex = '#384252') {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = baseHex;
+        ctx.fillRect(0, 0, 256, 256);
+
+        ctx.strokeStyle = lineHex;
+        ctx.lineWidth = 1;
+        for (let y = 0; y < 256; y += 2) {
+          ctx.globalAlpha = 0.25 + Math.random() * 0.35;
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(256, y);
+          ctx.stroke();
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        return texture;
+      }
+
+      /**
+       * Tekstur Stiker Spesifikasi SSD M.2 NVMe 2280 Gen 5.0 x4.
+       */
+      static createSSDStickerTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 280;
+        const ctx = canvas.getContext('2d');
+
+        // Latar belakang stiker grafit gelap teknis
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, 1024, 280);
+
+        // Garis aksen biru elektrik & abu-abu metalik
+        ctx.fillStyle = '#0ea5e9';
+        ctx.fillRect(0, 0, 1024, 18);
+        ctx.fillRect(0, 262, 1024, 18);
+
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(16, 28, 992, 224);
+
+        // Panah arah konektor M-Key di sisi kiri
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath();
+        ctx.moveTo(46, 140);
+        ctx.lineTo(86, 106);
+        ctx.lineTo(86, 174);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.font = 'bold 20px monospace';
+        ctx.fillText('M-KEY', 96, 147);
+
+        // Judul & Spesifikasi NVMe SSD
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = 'bold 42px Inter, sans-serif';
+        ctx.fillText('NVMe M.2 2280 SSD', 210, 112);
+
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = 'bold 26px monospace';
+        ctx.fillText('PCIe Gen 5.0 x4 • 2TB • 14,500 MB/s', 210, 160);
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '600 18px monospace';
+        ctx.fillText('MODEL: MZ-V9P2T0 • S/N: S69ENX0T841290', 210, 205);
+
+        // Badge kapasitas di sisi kanan
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(830, 62, 150, 156);
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(830, 62, 150, 156);
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = 'bold 44px Inter, sans-serif';
+        ctx.fillText('2TB', 862, 142);
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = 'bold 18px monospace';
+        ctx.fillText('GEN5 x4', 864, 180);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.anisotropy = 8;
+        return texture;
+      }
+
+      /**
+       * Tekstur Matras Anti-Statis (ESD Mat) untuk Meja Kerja Teknisi.
+       */
+      static createESDMatTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 1024;
+        const ctx = canvas.getContext('2d');
+
+        // Permukaan karet ESD biru-abu gelap
+        ctx.fillStyle = '#162032';
+        ctx.fillRect(0, 0, 1024, 1024);
+
+        // Grid presisi 1 cm
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.12)';
+        ctx.lineWidth = 1.5;
+        const step = 32;
+        for (let x = 0; x <= 1024; x += step) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, 1024);
+          ctx.stroke();
+        }
+        for (let y = 0; y <= 1024; y += step) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(1024, y);
+          ctx.stroke();
+        }
+
+        // Border teknis matras ESD
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+        ctx.lineWidth = 6;
+        ctx.strokeRect(20, 20, 984, 984);
+
+        // Label ESD Work Surface
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
+        ctx.font = 'bold 18px monospace';
+        ctx.fillText('ESD SAFE WORKBENCH MAT • ANTI-STATIC SURFACE', 44, 982);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.anisotropy = 8;
+        return texture;
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 2. MODEL MASTER MOTHERBOARD INTEL ATX (100% KONSISTEN DENGAN MASTER BLUEPRINT)
+     * ============================================================================
+     */
+    class MotherboardMaster3D {
+      constructor() {
+        this.group = new THREE.Group();
+        this.group.name = 'Intel_ATX_Master_Motherboard';
+
+        this.dimensions = {
+          width: 24.4,
+          length: 30.5,
+          thickness: 0.24
+        };
+
+        this.anchors = {
+          cpu: new THREE.Vector3(-1.5, 0.22, -7.2),
+          ram: [
+            new THREE.Vector3(3.8, 0.25, -7.2),
+            new THREE.Vector3(4.8, 0.25, -7.2),
+            new THREE.Vector3(5.8, 0.25, -7.2),
+            new THREE.Vector3(6.8, 0.25, -7.2)
+          ],
+          ssd: new THREE.Vector3(-1.4, 0.24, -1.6),
+          gpu: new THREE.Vector3(-1.2, 0.28, 1.6)
+        };
+
+        this.state = {
+          cpuLeverOpen: false,
+          cpuLoadPlateOpen: false,
+          cpuCoverRemoved: false,
+          ramLatchesOpen: [false, false, false, false],
+          m2HeatsinkRemoved: false,
+          m2LatchOpen: false,
+          pcieLatchOpen: false
+        };
+
+        // Mesh khusus area slot M.2 & heatsink untuk deteksi klik/drag bertahap
+        this.m2SlotClickMeshes = [];
+        this.m2HeatsinkClickMeshes = [];
+
+        this.pivots = {
+          cpuLever: null,
+          cpuLoadPlate: null,
+          cpuCover: null,
+          socketHighlightRing: null,
+          ramTopLatches: [],
+          ramBottomLatches: [],
+          m2Heatsink: null,
+          m2Latch: null,
+          m2HighlightRing: null,
+          pcieLatch: null
+        };
+
+        this._initMaterials();
+        this._buildPCB();
+        this._buildVRMAndIO();
+        this._buildCPUSocketMechanism();
+        this._buildRAMSlotsMechanism();
+        this._buildM2SlotMechanism();
+        this._buildPCIeSlotsMechanism();
+        this._buildPowerAndChipsetDetails();
+      }
+
+      _initMaterials() {
+        const pcbTex = ProceduralTextures.createPCBTexture();
+        const darkMetalTex = ProceduralTextures.createBrushedMetalTexture('#232a36', '#334155');
+        const silverMetalTex = ProceduralTextures.createBrushedMetalTexture('#94a3b8', '#cbd5e1');
+
+        this.materials = {
+          pcbTop: new THREE.MeshStandardMaterial({
+            map: pcbTex,
+            roughness: 0.48,
+            metalness: 0.15
+          }),
+          pcbEdge: new THREE.MeshStandardMaterial({
+            color: '#1e293b',
+            roughness: 0.6,
+            metalness: 0.2
+          }),
+          heatsinkDark: new THREE.MeshStandardMaterial({
+            map: darkMetalTex,
+            roughness: 0.35,
+            metalness: 0.78
+          }),
+          heatsinkSilver: new THREE.MeshStandardMaterial({
+            map: silverMetalTex,
+            roughness: 0.28,
+            metalness: 0.85
+          }),
+          chromeSteel: new THREE.MeshStandardMaterial({
+            color: '#d1d5db',
+            roughness: 0.22,
+            metalness: 0.92
+          }),
+          darkPlastic: new THREE.MeshStandardMaterial({
+            color: '#18181b',
+            roughness: 0.55,
+            metalness: 0.08
+          }),
+          grayPlastic: new THREE.MeshStandardMaterial({
+            color: '#475569',
+            roughness: 0.5,
+            metalness: 0.1
+          }),
+          goldPin: new THREE.MeshStandardMaterial({
+            color: '#fbbf24',
+            roughness: 0.22,
+            metalness: 0.95
+          }),
+          accentCyan: new THREE.MeshStandardMaterial({
+            color: '#0ea5e9',
+            emissive: '#0284c7',
+            emissiveIntensity: 0.35,
+            roughness: 0.3,
+            metalness: 0.4
+          }),
+          thermalPad: new THREE.MeshStandardMaterial({
+            color: '#38bdf8',
+            roughness: 0.85,
+            metalness: 0.05
+          })
+        };
+      }
+
+      _registerM2SlotHitbox(mesh) {
+        this.m2SlotClickMeshes.push(mesh);
+      }
+
+      _registerM2HeatsinkHitbox(mesh) {
+        this.m2HeatsinkClickMeshes.push(mesh);
+      }
+
+      _buildPCB() {
+        const { width, length, thickness } = this.dimensions;
+        const geo = new THREE.BoxGeometry(width, thickness, length);
+        const materials = [
+          this.materials.pcbEdge,
+          this.materials.pcbEdge,
+          this.materials.pcbTop,
+          this.materials.pcbEdge,
+          this.materials.pcbEdge,
+          this.materials.pcbEdge
+        ];
+        const pcbMesh = new THREE.Mesh(geo, materials);
+        pcbMesh.position.y = -thickness / 2;
+        pcbMesh.receiveShadow = true;
+        pcbMesh.castShadow = true;
+        this.group.add(pcbMesh);
+
+        const backplate = new THREE.Mesh(
+          new THREE.BoxGeometry(5.4, 0.14, 5.4),
+          this.materials.chromeSteel
+        );
+        backplate.position.set(this.anchors.cpu.x, -thickness - 0.07, this.anchors.cpu.z);
+        this.group.add(backplate);
+      }
+
+      _buildVRMAndIO() {
+        const vrmGroup = new THREE.Group();
+
+        const ioBase = new THREE.Mesh(
+          new THREE.BoxGeometry(4.4, 2.3, 13.8),
+          this.materials.heatsinkDark
+        );
+        ioBase.position.set(-9.8, 1.15, -7.8);
+        ioBase.castShadow = true;
+        ioBase.receiveShadow = true;
+        vrmGroup.add(ioBase);
+
+        const ioTopPlate = new THREE.Mesh(
+          new THREE.BoxGeometry(3.8, 0.25, 13.2),
+          this.materials.heatsinkSilver
+        );
+        ioTopPlate.position.set(-9.6, 2.42, -7.8);
+        vrmGroup.add(ioTopPlate);
+
+        const ioAccentStrip = new THREE.Mesh(
+          new THREE.BoxGeometry(0.18, 0.08, 11.5),
+          this.materials.accentCyan
+        );
+        ioAccentStrip.position.set(-8.2, 2.56, -7.8);
+        vrmGroup.add(ioAccentStrip);
+
+        const portOffsets = [-13.2, -11.4, -9.6, -7.6, -5.6, -3.5];
+        portOffsets.forEach((pz, idx) => {
+          const portHousing = new THREE.Mesh(
+            new THREE.BoxGeometry(0.6, 1.35, 1.35),
+            idx === 3 ? this.materials.accentCyan : this.materials.chromeSteel
+          );
+          portHousing.position.set(-12.05, 0.85, pz);
+          vrmGroup.add(portHousing);
+        });
+
+        const topVrm = new THREE.Mesh(
+          new THREE.BoxGeometry(8.8, 1.75, 2.4),
+          this.materials.heatsinkDark
+        );
+        topVrm.position.set(-1.5, 0.875, -12.6);
+        topVrm.castShadow = true;
+        topVrm.receiveShadow = true;
+        vrmGroup.add(topVrm);
+
+        for (let i = 0; i < 6; i++) {
+          const fin = new THREE.Mesh(
+            new THREE.BoxGeometry(8.6, 0.18, 0.16),
+            this.materials.heatsinkSilver
+          );
+          fin.position.set(-1.5, 1.82, -13.5 + i * 0.36);
+          vrmGroup.add(fin);
+        }
+
+        const chokeGeo = new THREE.BoxGeometry(0.75, 0.55, 0.75);
+        const capGeo = new THREE.CylinderGeometry(0.24, 0.24, 0.65, 16);
+
+        for (let i = 0; i < 7; i++) {
+          const cz = -10.5 + i * 1.05;
+          const choke = new THREE.Mesh(chokeGeo, this.materials.grayPlastic);
+          choke.position.set(-6.4, 0.275, cz);
+          vrmGroup.add(choke);
+
+          const cap = new THREE.Mesh(capGeo, this.materials.chromeSteel);
+          cap.position.set(-5.45, 0.325, cz);
+          vrmGroup.add(cap);
+        }
+
+        for (let i = 0; i < 6; i++) {
+          const cx = -4.5 + i * 1.15;
+          const choke = new THREE.Mesh(chokeGeo, this.materials.grayPlastic);
+          choke.position.set(cx, 0.275, -10.7);
+          vrmGroup.add(choke);
+
+          const cap = new THREE.Mesh(capGeo, this.materials.chromeSteel);
+          cap.position.set(cx, 0.325, -9.85);
+          vrmGroup.add(cap);
+        }
+
+        this.group.add(vrmGroup);
+      }
+
+      _buildCPUSocketMechanism() {
+        const socketRoot = new THREE.Group();
+        socketRoot.position.set(this.anchors.cpu.x, 0, this.anchors.cpu.z);
+
+        const baseFrame = new THREE.Mesh(
+          new THREE.BoxGeometry(4.7, 0.22, 4.9),
+          this.materials.darkPlastic
+        );
+        baseFrame.position.y = 0.11;
+        baseFrame.receiveShadow = true;
+        socketRoot.add(baseFrame);
+
+        const pinsTex = ProceduralTextures.createLGAPinsTexture();
+        const pinBedMat = new THREE.MeshStandardMaterial({
+          map: pinsTex,
+          roughness: 0.3,
+          metalness: 0.85
+        });
+        const pinBed = new THREE.Mesh(
+          new THREE.PlaneGeometry(3.75, 4.15),
+          pinBedMat
+        );
+        pinBed.rotation.x = -Math.PI / 2;
+        pinBed.position.y = 0.225;
+        socketRoot.add(pinBed);
+
+        const wallThick = 0.28;
+        const wallH = 0.16;
+        const topWall = new THREE.Mesh(new THREE.BoxGeometry(4.4, wallH, wallThick), this.materials.darkPlastic);
+        topWall.position.set(0, 0.28, -2.25);
+        const botWall = new THREE.Mesh(new THREE.BoxGeometry(4.4, wallH, wallThick), this.materials.darkPlastic);
+        botWall.position.set(0, 0.28, 2.25);
+        const leftWall = new THREE.Mesh(new THREE.BoxGeometry(wallThick, wallH, 4.7), this.materials.darkPlastic);
+        leftWall.position.set(-2.05, 0.28, 0);
+        const rightWall = new THREE.Mesh(new THREE.BoxGeometry(wallThick, wallH, 4.7), this.materials.darkPlastic);
+        rightWall.position.set(2.05, 0.28, 0);
+        socketRoot.add(topWall, botWall, leftWall, rightWall);
+
+        // Pelat penahan logam (ILM Load Plate) & tutup pelindung standar
+        const plateMat = this.materials.chromeSteel;
+        const pTop = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.08, 0.65), plateMat);
+        pTop.position.set(0, 0.40, -2.07);
+        const pBot = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.08, 0.75), plateMat);
+        pBot.position.set(0, 0.40, 2.13);
+        const pLeft = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.08, 4.8), plateMat);
+        pLeft.position.set(-1.98, 0.40, 0);
+        const pRight = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.08, 4.8), plateMat);
+        pRight.position.set(1.98, 0.40, 0);
+        const pTongue = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.08, 0.55), plateMat);
+        pTongue.position.set(0, 0.38, 2.73);
+        socketRoot.add(pTop, pBot, pLeft, pRight, pTongue);
+
+        const pnpCap = new THREE.Mesh(
+          new THREE.BoxGeometry(3.85, 0.12, 4.25),
+          this.materials.darkPlastic
+        );
+        pnpCap.position.set(0, 0.50, 0);
+        pnpCap.castShadow = true;
+        socketRoot.add(pnpCap);
+
+        const leverShaft = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.085, 0.085, 5.1, 12),
+          this.materials.chromeSteel
+        );
+        leverShaft.rotation.x = Math.PI / 2;
+        leverShaft.position.set(2.58, 0.34, -0.30);
+
+        const leverHandle = new THREE.Mesh(
+          new THREE.BoxGeometry(0.55, 0.14, 0.35),
+          this.materials.chromeSteel
+        );
+        leverHandle.position.set(2.80, 0.34, -2.80);
+        socketRoot.add(leverShaft, leverHandle);
+
+        this.group.add(socketRoot);
+      }
+
+      _buildRAMSlotsMechanism() {
+        const ramGroup = new THREE.Group();
+        const slotLength = 13.4;
+        const slotWidth = 0.62;
+        const slotHeight = 0.72;
+
+        this.anchors.ram.forEach((anchor, idx) => {
+          const singleSlot = new THREE.Group();
+          singleSlot.position.set(anchor.x, 0, anchor.z);
+
+          const housingMat = idx % 2 === 0 ? this.materials.grayPlastic : this.materials.darkPlastic;
+          const notchZ = 0.55;
+          const topLen = slotLength / 2 + notchZ - 0.18;
+          const botLen = slotLength / 2 - notchZ - 0.18;
+
+          const topBody = new THREE.Mesh(new THREE.BoxGeometry(slotWidth, slotHeight, topLen), housingMat);
+          topBody.position.set(0, slotHeight / 2, -slotLength / 2 + topLen / 2);
+          topBody.castShadow = true;
+
+          const botBody = new THREE.Mesh(new THREE.BoxGeometry(slotWidth, slotHeight, botLen), housingMat);
+          botBody.position.set(0, slotHeight / 2, slotLength / 2 - botLen / 2);
+          botBody.castShadow = true;
+
+          const keyBridge = new THREE.Mesh(new THREE.BoxGeometry(slotWidth * 0.85, slotHeight * 0.75, 0.28), housingMat);
+          keyBridge.position.set(0, slotHeight * 0.375, notchZ);
+
+          const goldStrip = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.12, slotLength - 0.8), this.materials.goldPin);
+          goldStrip.position.set(0, slotHeight - 0.14, 0);
+
+          singleSlot.add(topBody, botBody, keyBridge, goldStrip);
+
+          const topLatch = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.95, 0.42), this.materials.chromeSteel);
+          topLatch.position.set(0, 0.67, -slotLength / 2 - 0.13);
+          const botLatch = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.95, 0.42), this.materials.chromeSteel);
+          botLatch.position.set(0, 0.67, slotLength / 2 + 0.13);
+          singleSlot.add(topLatch, botLatch);
+
+          ramGroup.add(singleSlot);
+        });
+
+        this.group.add(ramGroup);
+      }
+
+      _buildM2SlotMechanism() {
+        const m2Group = new THREE.Group();
+        const { x, z } = this.anchors.ssd; // (-1.4, -1.6)
+
+        // 1. Konektor M.2 Socket 3 (M-Key) di sisi kiri (x - 4.0)
+        const connectorBody = new THREE.Mesh(
+          new THREE.BoxGeometry(0.72, 0.44, 2.38),
+          this.materials.darkPlastic
+        );
+        connectorBody.position.set(x - 4.02, 0.22, z);
+        connectorBody.castShadow = true;
+        connectorBody.receiveShadow = true;
+        m2Group.add(connectorBody);
+        this._registerM2SlotHitbox(connectorBody);
+
+        // Pin kontak emas di dalam konektor M.2 & pembatas kunci M-Key
+        const connPinsTop = new THREE.Mesh(
+          new THREE.BoxGeometry(0.32, 0.08, 1.45),
+          this.materials.goldPin
+        );
+        connPinsTop.position.set(x - 3.82, 0.30, z - 0.34);
+
+        const connPinsBot = new THREE.Mesh(
+          new THREE.BoxGeometry(0.32, 0.08, 0.36),
+          this.materials.goldPin
+        );
+        connPinsBot.position.set(x - 3.82, 0.30, z + 0.88);
+
+        const mKeyBridge = new THREE.Mesh(
+          new THREE.BoxGeometry(0.42, 0.28, 0.16),
+          this.materials.grayPlastic
+        );
+        mKeyBridge.position.set(x - 3.85, 0.26, z + 0.55);
+
+        m2Group.add(connPinsTop, connPinsBot, mKeyBridge);
+        [connPinsTop, connPinsBot, mKeyBridge].forEach((m) => this._registerM2SlotHitbox(m));
+
+        // 2. Area dudukan PCB M.2 2280 (hitam tipis sebagai hitbox & rel panduan)
+        const slotBed = new THREE.Mesh(
+          new THREE.BoxGeometry(8.0, 0.04, 2.26),
+          new THREE.MeshStandardMaterial({ color: '#0f172a', roughness: 0.7, metalness: 0.1 })
+        );
+        slotBed.position.set(x, 0.02, z);
+        slotBed.receiveShadow = true;
+        m2Group.add(slotBed);
+        this._registerM2SlotHitbox(slotBed);
+
+        // 3. Standoff Kuningan 2242, 2260, dan 2280 (ujung kanan x + 4.0)
+        [x + 0.2, x + 2.0].forEach((sx) => {
+          const midStandoff = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.18, 0.20, 0.22, 14),
+            this.materials.goldPin
+          );
+          midStandoff.position.set(sx, 0.11, z);
+          m2Group.add(midStandoff);
+          this._registerM2SlotHitbox(midStandoff);
+        });
+
+        const endStandoff = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.24, 0.26, 0.26, 16),
+          this.materials.goldPin
+        );
+        endStandoff.position.set(x + 4.0, 0.13, z);
+        m2Group.add(endStandoff);
+        this._registerM2SlotHitbox(endStandoff);
+
+        // 4. PIVOT KLIP PENGUNCI Q-LATCH M.2 DI UJUNG KANAN (MENEMPEL PADA MOTHERBOARD)
+        const qLatchPivot = new THREE.Group();
+        qLatchPivot.position.set(x + 4.0, 0.38, z);
+
+        const latchCap = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.28, 0.28, 0.12, 16),
+          this.materials.darkPlastic
+        );
+        const latchArm = new THREE.Mesh(
+          new THREE.BoxGeometry(0.75, 0.10, 0.28),
+          this.materials.accentCyan
+        );
+        latchArm.position.set(-0.24, 0.02, 0);
+        latchArm.castShadow = true;
+
+        qLatchPivot.add(latchCap, latchArm);
+        [latchCap, latchArm].forEach((m) => this._registerM2SlotHitbox(m));
+        m2Group.add(qLatchPivot);
+        this.pivots.m2Latch = qLatchPivot;
+
+        // 5. Bingkai Panduan Slot M.2 (menyala saat SSD atau Heatsink di-drag mendekati slot)
+        const guideGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(8.5, 0.52, 2.52));
+        const guideMat = new THREE.LineBasicMaterial({ color: '#38bdf8', transparent: true, opacity: 0.0 });
+        const guideBox = new THREE.LineSegments(guideGeo, guideMat);
+        guideBox.position.set(x, 0.30, z);
+        m2Group.add(guideBox);
+        this.pivots.m2HighlightRing = guideBox;
+
+        // 6. PIVOT HEATSINK PENDINGIN M.2 (M.2 ARMOR + THERMAL PAD)
+        const heatsinkPivot = new THREE.Group();
+        heatsinkPivot.position.set(x, 0.63, z);
+
+        const thermalPad = new THREE.Mesh(
+          new THREE.BoxGeometry(7.6, 0.06, 1.95),
+          this.materials.thermalPad
+        );
+        thermalPad.position.set(0, -0.17, 0);
+
+        const hsBody = new THREE.Mesh(
+          new THREE.BoxGeometry(8.5, 0.30, 2.35),
+          this.materials.heatsinkDark
+        );
+        hsBody.castShadow = true;
+        hsBody.receiveShadow = true;
+
+        const hsTop = new THREE.Mesh(
+          new THREE.BoxGeometry(7.8, 0.08, 1.6),
+          this.materials.heatsinkSilver
+        );
+        hsTop.position.set(0, 0.19, 0);
+
+        const hsAccent = new THREE.Mesh(
+          new THREE.BoxGeometry(5.6, 0.05, 0.14),
+          this.materials.accentCyan
+        );
+        hsAccent.position.set(0, 0.24, 0.45);
+
+        // Dua sekrup pengunci heatsink di ujung kiri dan kanan
+        [-3.95, 3.95].forEach((screwX) => {
+          const screw = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.18, 0.18, 0.12, 16),
+            this.materials.chromeSteel
+          );
+          screw.position.set(screwX, 0.18, 0);
+          heatsinkPivot.add(screw);
+          this._registerM2HeatsinkHitbox(screw);
+        });
+
+        heatsinkPivot.add(thermalPad, hsBody, hsTop, hsAccent);
+        [thermalPad, hsBody, hsTop, hsAccent].forEach((m) => this._registerM2HeatsinkHitbox(m));
+        m2Group.add(heatsinkPivot);
+        this.pivots.m2Heatsink = heatsinkPivot;
+
+        this.group.add(m2Group);
+      }
+
+      _buildPCIeSlotsMechanism() {
+        const pcieGroup = new THREE.Group();
+        const { x, z } = this.anchors.gpu;
+        const slotLen = 13.8;
+
+        const x16Group = new THREE.Group();
+        x16Group.position.set(x, 0, z);
+
+        const innerPlastic = new THREE.Mesh(new THREE.BoxGeometry(slotLen, 0.68, 0.72), this.materials.darkPlastic);
+        innerPlastic.position.y = 0.34;
+        const steelArmor = new THREE.Mesh(new THREE.BoxGeometry(slotLen + 0.16, 0.64, 0.84), this.materials.chromeSteel);
+        steelArmor.position.y = 0.32;
+        steelArmor.castShadow = true;
+        const pciePins = new THREE.Mesh(new THREE.BoxGeometry(slotLen - 0.5, 0.12, 0.22), this.materials.goldPin);
+        pciePins.position.y = 0.64;
+
+        const latchWing = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.65, 0.78), this.materials.darkPlastic);
+        latchWing.position.set(slotLen / 2 + 0.47, 0.47, 0);
+        const latchAccent = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.14, 0.82), this.materials.accentCyan);
+        latchAccent.position.set(slotLen / 2 + 0.57, 0.77, 0);
+
+        x16Group.add(innerPlastic, steelArmor, pciePins, latchWing, latchAccent);
+        pcieGroup.add(x16Group);
+
+        const extraSlots = [
+          { len: 2.6, posX: -6.8, posZ: 4.6 },
+          { len: 13.8, posX: -1.2, posZ: 7.4 },
+          { len: 2.6, posX: -6.8, posZ: 10.2 }
+        ];
+        extraSlots.forEach((sl) => {
+          const sMesh = new THREE.Mesh(new THREE.BoxGeometry(sl.len, 0.62, 0.72), this.materials.darkPlastic);
+          sMesh.position.set(sl.posX, 0.31, sl.posZ);
+          const sPins = new THREE.Mesh(new THREE.BoxGeometry(sl.len - 0.35, 0.1, 0.2), this.materials.goldPin);
+          sPins.position.set(sl.posX, 0.58, sl.posZ);
+          pcieGroup.add(sMesh, sPins);
+        });
+
+        this.group.add(pcieGroup);
+      }
+
+      _buildPowerAndChipsetDetails() {
+        const details = new THREE.Group();
+
+        const atx24 = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1.35, 5.2), this.materials.darkPlastic);
+        atx24.position.set(10.8, 0.675, -5.2);
+        atx24.castShadow = true;
+        details.add(atx24);
+
+        for (let r = 0; r < 12; r++) {
+          for (let c = 0; c < 2; c++) {
+            const p = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.4, 0.12), this.materials.goldPin);
+            p.position.set(10.62 + c * 0.36, 1.18, -7.4 + r * 0.4);
+            details.add(p);
+          }
+        }
+
+        [-7.2, -5.1].forEach((cx) => {
+          const cpuPwr = new THREE.Mesh(new THREE.BoxGeometry(1.85, 1.35, 1.15), this.materials.darkPlastic);
+          cpuPwr.position.set(cx, 0.675, -14.1);
+          cpuPwr.castShadow = true;
+          details.add(cpuPwr);
+        });
+
+        const pchBase = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.72, 6.2), this.materials.heatsinkDark);
+        pchBase.position.set(5.6, 0.36, 6.6);
+        pchBase.castShadow = true;
+        const pchTop = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.16, 5.4), this.materials.heatsinkSilver);
+        pchTop.position.set(5.6, 0.78, 6.6);
+        const pchAccent = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.06, 0.22), this.materials.accentCyan);
+        pchAccent.position.set(5.6, 0.88, 8.2);
+        details.add(pchBase, pchTop, pchAccent);
+
+        const cmosHolder = new THREE.Mesh(new THREE.CylinderGeometry(1.18, 1.18, 0.35, 24), this.materials.darkPlastic);
+        cmosHolder.position.set(1.3, 0.175, 4.6);
+        const cmosBattery = new THREE.Mesh(new THREE.CylinderGeometry(0.98, 0.98, 0.16, 24), this.materials.chromeSteel);
+        cmosBattery.position.set(1.3, 0.36, 4.6);
+        details.add(cmosHolder, cmosBattery);
+
+        [10.2, 12.1].forEach((sz) => {
+          const sataBlock = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.15, 1.65), this.materials.darkPlastic);
+          sataBlock.position.set(11.3, 0.575, sz);
+          details.add(sataBlock);
+        });
+
+        [-3.5, 0.5, 4.2, 7.8].forEach((hx, i) => {
+          const hdr = new THREE.Mesh(new THREE.BoxGeometry(i === 3 ? 2.4 : 1.6, 0.65, 0.75), this.materials.darkPlastic);
+          hdr.position.set(hx, 0.325, 14.35);
+          details.add(hdr);
+        });
+
+        this.group.add(details);
+      }
+
+      update(dt, isDraggingHeatsink = false, dragWorldPos = null, mbWorldPos = null) {
+        const speed = Math.min(1, dt * 10);
+        const { x, z } = this.anchors.ssd;
+
+        // 1. Animasi Heatsink Pendingin M.2:
+        // - Saat di-drag pengguna: mengikuti posisi kursor di atas bidang meja/motherboard
+        // - Saat dilepas (m2HeatsinkRemoved): diletakkan di meja kanan tepat di bawah SSD (lokal mb: 17.7, 0.14, 5.6)
+        // - Saat terpasang kembali: duduk presisi di atas slot M.2 (lokal mb: x, 0.63, z)
+        if (this.pivots.m2Heatsink) {
+          if (isDraggingHeatsink && dragWorldPos && mbWorldPos) {
+            const dragLerp = Math.min(1, dt * 18);
+            const targetHsX = dragWorldPos.x - mbWorldPos.x;
+            const targetHsY = dragWorldPos.y - mbWorldPos.y;
+            const targetHsZ = dragWorldPos.z - mbWorldPos.z;
+
+            this.pivots.m2Heatsink.position.x += (targetHsX - this.pivots.m2Heatsink.position.x) * dragLerp;
+            this.pivots.m2Heatsink.position.y += (targetHsY - this.pivots.m2Heatsink.position.y) * dragLerp;
+            this.pivots.m2Heatsink.position.z += (targetHsZ - this.pivots.m2Heatsink.position.z) * dragLerp;
+            this.pivots.m2Heatsink.rotation.x += (0 - this.pivots.m2Heatsink.rotation.x) * dragLerp;
+          } else {
+            const targetHsX = this.state.m2HeatsinkRemoved ? 17.7 : x;
+            const restHsY = this.state.m2HeatsinkRemoved ? 0.14 : 0.63;
+            const targetHsZ = this.state.m2HeatsinkRemoved ? 5.6 : z;
+
+            const horizDist = Math.hypot(
+              targetHsX - this.pivots.m2Heatsink.position.x,
+              targetHsZ - this.pivots.m2Heatsink.position.z
+            );
+            // Angkat heatsink ke Y = 3.6 selama berpindah horizontal agar tidak menabrak slot RAM
+            const arcLiftY = horizDist > 0.45 ? Math.max(restHsY, 3.6) : restHsY;
+            const targetTiltX = horizDist > 0.45 ? (this.state.m2HeatsinkRemoved ? -0.18 : 0.18) : 0;
+
+            this.pivots.m2Heatsink.position.x += (targetHsX - this.pivots.m2Heatsink.position.x) * speed;
+            this.pivots.m2Heatsink.position.z += (targetHsZ - this.pivots.m2Heatsink.position.z) * speed;
+            this.pivots.m2Heatsink.position.y += (arcLiftY - this.pivots.m2Heatsink.position.y) * Math.min(1, dt * 12);
+            this.pivots.m2Heatsink.rotation.x += (targetTiltX - this.pivots.m2Heatsink.rotation.x) * speed;
+          }
+          this.pivots.m2Heatsink.visible = true;
+        }
+
+        // 2. Animasi Klip Pengunci Q-Latch M.2 (berputar 90° membuka/menutup ujung SSD)
+        if (this.pivots.m2Latch) {
+          const targetLatchRotY = this.state.m2LatchOpen ? Math.PI / 2 : 0;
+          this.pivots.m2Latch.rotation.y += (targetLatchRotY - this.pivots.m2Latch.rotation.y) * speed;
+        }
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 3. MODEL 3D MEJA KERJA TEKNISI & MATRAS ANTI-STATIS (ESD WORKBENCH)
+     * ============================================================================
+     */
+    class WorkbenchTable3D {
+      constructor(motherboardPos, trayPos) {
+        this.group = new THREE.Group();
+        this.group.name = 'Technician_Workbench_Table';
+
+        const woodMat = new THREE.MeshStandardMaterial({
+          color: '#2b2118',
+          roughness: 0.65,
+          metalness: 0.08
+        });
+        const trimMat = new THREE.MeshStandardMaterial({
+          color: '#18181b',
+          roughness: 0.5,
+          metalness: 0.4
+        });
+        const steelLegMat = new THREE.MeshStandardMaterial({
+          color: '#1e293b',
+          roughness: 0.35,
+          metalness: 0.8
+        });
+        const esdTex = ProceduralTextures.createESDMatTexture();
+        const esdMat = new THREE.MeshStandardMaterial({
+          map: esdTex,
+          roughness: 0.78,
+          metalness: 0.05
+        });
+
+        // Daun Meja Utama (Permukaan atas di Y = -0.35)
+        const tableTop = new THREE.Mesh(
+          new THREE.BoxGeometry(48, 1.5, 38),
+          woodMat
+        );
+        tableTop.position.set(1.5, -1.10, 0);
+        tableTop.receiveShadow = true;
+        this.group.add(tableTop);
+
+        // Lis pinggir meja
+        const edgeRim = new THREE.Mesh(
+          new THREE.BoxGeometry(48.3, 1.55, 38.3),
+          trimMat
+        );
+        edgeRim.position.set(1.5, -1.12, 0);
+        this.group.add(edgeRim);
+
+        // Matras Anti-Statis (ESD Mat) di atas meja (Y = -0.35 s/d -0.31)
+        const esdPad = new THREE.Mesh(
+          new THREE.BoxGeometry(42, 0.04, 33),
+          esdMat
+        );
+        esdPad.position.set(1.5, -0.33, 0);
+        esdPad.receiveShadow = true;
+        this.group.add(esdPad);
+
+        // 4 Kaki Baja Meja Kerja
+        const legGeo = new THREE.BoxGeometry(1.6, 22, 1.6);
+        [
+          [-20.5, -12.5, -16.5],
+          [23.5, -12.5, -16.5],
+          [-20.5, -12.5, 16.5],
+          [23.5, -12.5, 16.5]
+        ].forEach(([lx, ly, lz]) => {
+          const leg = new THREE.Mesh(legGeo, steelLegMat);
+          leg.position.set(lx, ly, lz);
+          this.group.add(leg);
+        });
+
+        // 9 Standoff Kuningan di bawah lubang baut Motherboard ATX
+        const standoffMat = new THREE.MeshStandardMaterial({
+          color: '#d4af37',
+          roughness: 0.25,
+          metalness: 0.9
+        });
+        const holeOffsetsX = [-11.0, 0, 10.8];
+        const holeOffsetsZ = [-14.0, 0, 14.0];
+        holeOffsetsX.forEach((ox) => {
+          holeOffsetsZ.forEach((oz) => {
+            const standoff = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.28, 0.32, 0.08, 12),
+              standoffMat
+            );
+            standoff.position.set(motherboardPos.x + ox, -0.28, motherboardPos.z + oz);
+            this.group.add(standoff);
+          });
+        });
+
+        // Tray Penyimpanan SSD M.2 (ESD Storage Tray) di sisi kanan motherboard
+        const trayGroup = new THREE.Group();
+        trayGroup.position.set(trayPos.x, -0.31, trayPos.z);
+
+        const trayOuter = new THREE.Mesh(
+          new THREE.BoxGeometry(9.6, 0.22, 9.6),
+          new THREE.MeshStandardMaterial({ color: '#0f172a', roughness: 0.5, metalness: 0.2 })
+        );
+        trayOuter.position.y = 0.11;
+        trayOuter.receiveShadow = true;
+        trayOuter.castShadow = true;
+
+        const trayInnerBed = new THREE.Mesh(
+          new THREE.BoxGeometry(8.6, 0.06, 8.6),
+          new THREE.MeshStandardMaterial({ color: '#1e293b', roughness: 0.7 })
+        );
+        trayInnerBed.position.y = 0.23;
+
+        const trayBorder = new THREE.LineSegments(
+          new THREE.EdgesGeometry(new THREE.BoxGeometry(9.65, 0.24, 9.65)),
+          new THREE.LineBasicMaterial({ color: '#38bdf8' })
+        );
+        trayBorder.position.y = 0.12;
+
+        trayGroup.add(trayOuter, trayInnerBed, trayBorder);
+        this.group.add(trayGroup);
+
+        // Dudukan Penyimpanan Heatsink M.2 di meja sebelah kanan tepat di bawah SSD
+        const hsTrayGroup = new THREE.Group();
+        hsTrayGroup.position.set(trayPos.x, -0.31, trayPos.z + 7.2);
+
+        const hsTrayOuter = new THREE.Mesh(
+          new THREE.BoxGeometry(9.6, 0.20, 3.6),
+          new THREE.MeshStandardMaterial({ color: '#0f172a', roughness: 0.5, metalness: 0.2 })
+        );
+        hsTrayOuter.position.y = 0.10;
+        hsTrayOuter.receiveShadow = true;
+        hsTrayOuter.castShadow = true;
+
+        const hsTrayInnerBed = new THREE.Mesh(
+          new THREE.BoxGeometry(8.8, 0.06, 2.8),
+          new THREE.MeshStandardMaterial({ color: '#1e293b', roughness: 0.7 })
+        );
+        hsTrayInnerBed.position.y = 0.21;
+
+        const hsTrayBorder = new THREE.LineSegments(
+          new THREE.EdgesGeometry(new THREE.BoxGeometry(9.65, 0.22, 3.65)),
+          new THREE.LineBasicMaterial({ color: '#38bdf8' })
+        );
+        hsTrayBorder.position.y = 0.11;
+
+        hsTrayGroup.add(hsTrayOuter, hsTrayInnerBed, hsTrayBorder);
+        this.group.add(hsTrayGroup);
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 4. MODEL 3D SSD M.2 NVMe 2280 M-KEY (DIMENSI PRESISI SESUAI SLOT M.2)
+     * ============================================================================
+     */
+    class SSDNVMe3D {
+      constructor() {
+        this.group = new THREE.Group();
+        this.group.name = 'NVMe_M2_2280_SSD';
+
+        // Dimensi standar M.2 2280 (80mm x 22mm -> 8.0 x 2.2 satuan)
+        this.length = 8.0;
+        this.width = 2.2;
+
+        this.draggableMeshes = [];
+
+        const pcbMat = new THREE.MeshStandardMaterial({
+          color: '#111827',
+          roughness: 0.42,
+          metalness: 0.22
+        });
+
+        const goldMat = new THREE.MeshStandardMaterial({
+          color: '#facc15',
+          emissive: '#ca8a04',
+          emissiveIntensity: 0.2,
+          roughness: 0.2,
+          metalness: 0.95
+        });
+
+        const chipMat = new THREE.MeshStandardMaterial({
+          color: '#18181b',
+          roughness: 0.35,
+          metalness: 0.3
+        });
+
+        const controllerMat = new THREE.MeshStandardMaterial({
+          color: '#94a3b8',
+          roughness: 0.24,
+          metalness: 0.9
+        });
+
+        const stickerTex = ProceduralTextures.createSSDStickerTexture();
+        const stickerMat = new THREE.MeshStandardMaterial({
+          map: stickerTex,
+          roughness: 0.38,
+          metalness: 0.15
+        });
+
+        // 1. Badan Utama PCB Hitam SSD M.2 2280
+        const mainPCB = new THREE.Mesh(
+          new THREE.BoxGeometry(7.55, 0.09, this.width),
+          pcbMat
+        );
+        mainPCB.position.set(0.18, 0.045, 0);
+        mainPCB.castShadow = true;
+        mainPCB.receiveShadow = true;
+        this.group.add(mainPCB);
+        this.draggableMeshes.push(mainPCB);
+
+        // 2. Lidah Konektor M-Key di Ujung Kiri (x = -3.80) dengan Takik Asimetris
+        const tongueTop = new THREE.Mesh(
+          new THREE.BoxGeometry(0.42, 0.085, 1.44),
+          pcbMat
+        );
+        tongueTop.position.set(-3.78, 0.043, -0.34);
+
+        const tongueBot = new THREE.Mesh(
+          new THREE.BoxGeometry(0.42, 0.085, 0.36),
+          pcbMat
+        );
+        tongueBot.position.set(-3.78, 0.043, 0.88);
+
+        this.group.add(tongueTop, tongueBot);
+        this.draggableMeshes.push(tongueTop, tongueBot);
+
+        // Pin Emas M-Key (atas & bawah lidah konektor)
+        const goldEdgeTop = new THREE.Mesh(
+          new THREE.BoxGeometry(0.36, 0.096, 1.38),
+          goldMat
+        );
+        goldEdgeTop.position.set(-3.80, 0.045, -0.34);
+
+        const goldEdgeBot = new THREE.Mesh(
+          new THREE.BoxGeometry(0.36, 0.096, 0.30),
+          goldMat
+        );
+        goldEdgeBot.position.set(-3.80, 0.045, 0.88);
+
+        this.group.add(goldEdgeTop, goldEdgeBot);
+        this.draggableMeshes.push(goldEdgeTop, goldEdgeBot);
+
+        // 3. Cincin Semi-Lingkaran Takik Baut/Q-Latch di Ujung Kanan (x = +3.92)
+        const rearNotchRing = new THREE.Mesh(
+          new THREE.TorusGeometry(0.22, 0.045, 8, 16, Math.PI),
+          goldMat
+        );
+        rearNotchRing.rotation.x = Math.PI / 2;
+        rearNotchRing.rotation.z = Math.PI / 2;
+        rearNotchRing.position.set(3.92, 0.092, 0);
+        this.group.add(rearNotchRing);
+        this.draggableMeshes.push(rearNotchRing);
+
+        // 4. Komponen IC Permukaan: NVMe Controller, DRAM Cache & 2x 3D NAND Flash
+        const controllerIC = new THREE.Mesh(
+          new THREE.BoxGeometry(1.15, 0.07, 1.15),
+          controllerMat
+        );
+        controllerIC.position.set(-2.35, 0.125, 0);
+        controllerIC.castShadow = true;
+
+        const dramIC = new THREE.Mesh(
+          new THREE.BoxGeometry(0.85, 0.06, 1.05),
+          chipMat
+        );
+        dramIC.position.set(-1.05, 0.12, 0);
+
+        const nandIC1 = new THREE.Mesh(
+          new THREE.BoxGeometry(1.65, 0.065, 1.55),
+          chipMat
+        );
+        nandIC1.position.set(0.65, 0.122, 0);
+
+        const nandIC2 = new THREE.Mesh(
+          new THREE.BoxGeometry(1.65, 0.065, 1.55),
+          chipMat
+        );
+        nandIC2.position.set(2.55, 0.122, 0);
+
+        this.group.add(controllerIC, dramIC, nandIC1, nandIC2);
+        this.draggableMeshes.push(controllerIC, dramIC, nandIC1, nandIC2);
+
+        // 5. Stiker Label Teknis NVMe M.2 2280 di permukaan atas
+        const labelPlane = new THREE.Mesh(
+          new THREE.PlaneGeometry(6.8, 1.85),
+          stickerMat
+        );
+        labelPlane.rotation.x = -Math.PI / 2;
+        labelPlane.position.set(0.22, 0.162, 0);
+        this.group.add(labelPlane);
+        this.draggableMeshes.push(labelPlane);
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 5. LOGIKA UTAMA SIMULASI INTERAKTIF
+     * ============================================================================
+     */
+    function initSimulation() {
+      const container = document.getElementById('canvas-container');
+      if (!container) return;
+
+      if (typeof THREE === 'undefined') {
+        container.innerHTML = '<div class="flex items-center justify-center h-full p-6 text-center text-xs text-amber-300">Gagal memuat pustaka 3D (Three.js). Periksa koneksi internet lalu muat ulang halaman.</div>';
+        return;
+      }
+
+      try {
+        const getViewportSize = () => {
+          const rect = container.getBoundingClientRect();
+          const w = Math.max(10, Math.round(rect.width || container.clientWidth || window.innerWidth || 800));
+          const h = Math.max(10, Math.round(rect.height || container.clientHeight || window.innerHeight || 600));
+          return { w, h };
+        };
+
+        const initialSize = getViewportSize();
+
+        // Scene & Kamera
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color('#090d16');
+
+        const camera = new THREE.PerspectiveCamera(
+          42,
+          initialSize.w / initialSize.h,
+          0.1,
+          220
+        );
+
+        const renderer = new THREE.WebGLRenderer({
+          antialias: true,
+          preserveDrawingBuffer: true,
+          powerPreference: 'high-performance'
+        });
+        renderer.setSize(initialSize.w, initialSize.h, false);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        container.innerHTML = '';
+        container.appendChild(renderer.domElement);
+
+        // Pencahayaan Studio Bengkel Teknisi
+        const hemiLight = new THREE.HemisphereLight('#f1f5f9', '#1e293b', 0.92);
+        hemiLight.position.set(0, 35, 0);
+        scene.add(hemiLight);
+
+        const dirLight = new THREE.DirectionalLight('#ffffff', 1.15);
+        dirLight.position.set(18, 32, 20);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.near = 2;
+        dirLight.shadow.camera.far = 85;
+        const shadowBound = 26;
+        dirLight.shadow.camera.left = -shadowBound;
+        dirLight.shadow.camera.right = shadowBound;
+        dirLight.shadow.camera.top = shadowBound;
+        dirLight.shadow.camera.bottom = -shadowBound;
+        dirLight.shadow.bias = -0.0005;
+        scene.add(dirLight);
+
+        const rimLight = new THREE.DirectionalLight('#38bdf8', 0.4);
+        rimLight.position.set(-24, 18, -22);
+        scene.add(rimLight);
+
+        // Posisi Motherboard & SSD Tray di atas Meja Kerja
+        const mbWorldPos = new THREE.Vector3(-3.2, 0, 0);
+        const trayWorldPos = new THREE.Vector3(14.5, -0.05, -1.6);
+
+        // Instansiasi Meja Kerja, Motherboard Master & SSD M.2 NVMe
+        const workbench = new WorkbenchTable3D(mbWorldPos, trayWorldPos);
+        scene.add(workbench.group);
+
+        const motherboard = new MotherboardMaster3D();
+        motherboard.group.position.copy(mbWorldPos);
+        scene.add(motherboard.group);
+
+        // Koordinat World Slot M.2 SSD
+        const slotWorldPos = new THREE.Vector3(
+          mbWorldPos.x + motherboard.anchors.ssd.x,
+          mbWorldPos.y + motherboard.anchors.ssd.y,
+          mbWorldPos.z + motherboard.anchors.ssd.z
+        );
+
+        const ssd = new SSDNVMe3D();
+        scene.add(ssd.group);
+
+        // Bayangan proyeksi lembut saat SSD atau Heatsink di-drag di atas meja/motherboard
+        const dragShadowMesh = new THREE.Mesh(
+          new THREE.PlaneGeometry(8.3, 2.5),
+          new THREE.MeshBasicMaterial({
+            color: '#38bdf8',
+            transparent: true,
+            opacity: 0.0,
+            depthWrite: false
+          })
+        );
+        dragShadowMesh.rotation.x = -Math.PI / 2;
+        dragShadowMesh.position.y = 0.45;
+        scene.add(dragShadowMesh);
+
+        // ======================================================================
+        // KONTROL KAMERA PRESET & PARALAKS KURSOR (X, Y SAJA, Z TETAP)
+        // ======================================================================
+        const camState = {
+          target: new THREE.Vector3(2.5, 0, -1.6),
+          desiredTarget: new THREE.Vector3(2.5, 0, -1.6),
+          radius: 38,
+          desiredRadius: 38,
+          theta: 0.22,
+          desiredTheta: 0.22,
+          phi: 0.72,
+          desiredPhi: 0.72,
+          cursorNormX: 0,
+          cursorNormY: 0,
+          cursorOffsetX: 0,
+          cursorOffsetY: 0
+        };
+
+        const cameraPresets = {
+          workbench: { target: [2.5, 0, -1.6], radius: 38, theta: 0.22, phi: 0.72 },
+          slot:      { target: [slotWorldPos.x, 0.4, slotWorldPos.z], radius: 15.5, theta: 0.18, phi: 0.68 },
+          ssdTray:   { target: [trayWorldPos.x, 0.2, trayWorldPos.z + 2.0], radius: 16.5, theta: -0.22, phi: 0.68 },
+          topDown:   { target: [2.2, 0, -1.6], radius: 34, theta: 0.0, phi: 0.14 }
+        };
+
+        function applyCameraPreset(name) {
+          const p = cameraPresets[name];
+          if (!p) return;
+          camState.desiredTarget.set(p.target[0], p.target[1], p.target[2]);
+          camState.desiredRadius = p.radius;
+          camState.desiredTheta = p.theta;
+          camState.desiredPhi = p.phi;
+
+          document.querySelectorAll('.cam-btn').forEach((btn) => {
+            if (btn.dataset.cam === name) {
+              btn.className = 'cam-btn bg-sky-600 text-white border border-sky-400/60 px-2.5 py-1.5 rounded-xl text-xs font-medium shadow-md transition hover:bg-sky-500 active:scale-95';
+            } else {
+              btn.className = 'cam-btn bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 px-2.5 py-1.5 rounded-xl text-xs font-medium backdrop-blur-md shadow-md transition active:scale-95';
+            }
+          });
+        }
+
+        document.querySelectorAll('.cam-btn').forEach((btn) => {
+          btn.addEventListener('click', () => applyCameraPreset(btn.dataset.cam));
+        });
+
+        // Zoom roda mouse (wheel) tanpa mengubah orbit
+        container.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          const zoomStep = e.deltaY * 0.015;
+          camState.desiredRadius = Math.max(10.5, Math.min(54, camState.desiredRadius + zoomStep));
+        }, { passive: false });
+
+        // ======================================================================
+        // STATE PERAKITAN SSD M.2 & ORIENTASI
+        // ======================================================================
+        const simState = {
+          rotationStep: 1, // 0 = 0° (Sejajar), 1 = 90°, 2 = 180°, 3 = 270°
+          targetRotationY: -Math.PI / 2,
+          ssdInstalled: false,
+          isDraggingSSD: false,
+          ssdTargetPos: new THREE.Vector3(trayWorldPos.x, 0.21, trayWorldPos.z),
+          isDraggingHeatsink: false,
+          heatsinkDragWorldPos: new THREE.Vector3(trayWorldPos.x, 1.45, trayWorldPos.z + 7.2),
+          completed: false,
+          countdownTimer: null
+        };
+
+        function resetSSDTransformToTray() {
+          simState.ssdTargetPos.set(trayWorldPos.x, 0.21, trayWorldPos.z);
+          ssd.group.position.copy(simState.ssdTargetPos);
+        }
+        resetSSDTransformToTray();
+
+        // ======================================================================
+        // TOAST FEEDBACK & SINKRONISASI UI LANGKAH
+        // ======================================================================
+        let toastTimeout = null;
+        function showFeedback(title, msg, type = 'info') {
+          const toast = document.getElementById('feedback-toast');
+          const dot = document.getElementById('toast-dot');
+          const tTitle = document.getElementById('toast-title');
+          const tMsg = document.getElementById('toast-msg');
+
+          tTitle.textContent = title;
+          tMsg.textContent = msg;
+
+          if (type === 'warn') {
+            toast.className = 'pointer-events-none absolute top-24 sm:top-4 right-3 sm:right-4 max-w-xs sm:max-w-sm bg-slate-900/95 border border-amber-500/60 text-slate-100 px-3.5 py-2.5 rounded-xl shadow-2xl backdrop-blur-md transition-all duration-300 opacity-100 translate-y-0 z-20';
+            dot.className = 'mt-1 w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0';
+            tTitle.className = 'text-xs font-semibold text-amber-300';
+          } else if (type === 'success') {
+            toast.className = 'pointer-events-none absolute top-24 sm:top-4 right-3 sm:right-4 max-w-xs sm:max-w-sm bg-slate-900/95 border border-emerald-500/60 text-slate-100 px-3.5 py-2.5 rounded-xl shadow-2xl backdrop-blur-md transition-all duration-300 opacity-100 translate-y-0 z-20';
+            dot.className = 'mt-1 w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0';
+            tTitle.className = 'text-xs font-semibold text-emerald-300';
+          } else {
+            toast.className = 'pointer-events-none absolute top-24 sm:top-4 right-3 sm:right-4 max-w-xs sm:max-w-sm bg-slate-900/95 border border-sky-500/50 text-slate-100 px-3.5 py-2.5 rounded-xl shadow-2xl backdrop-blur-md transition-all duration-300 opacity-100 translate-y-0 z-20';
+            dot.className = 'mt-1 w-2.5 h-2.5 rounded-full bg-sky-400 shrink-0';
+            tTitle.className = 'text-xs font-semibold text-sky-300';
+          }
+
+          clearTimeout(toastTimeout);
+          toastTimeout = setTimeout(() => {
+            toast.classList.remove('opacity-100', 'translate-y-0');
+            toast.classList.add('opacity-0', '-translate-y-2');
+          }, 3200);
+        }
+
+        function getCurrentStepIndex() {
+          const st = motherboard.state;
+          if (!st.m2HeatsinkRemoved) return 1;
+          if (!st.m2LatchOpen) return 2;
+          if (!simState.ssdInstalled) return 3;
+          if (st.m2LatchOpen) return 4;
+          if (st.m2HeatsinkRemoved) return 5;
+          return 6;
+        }
+
+        function updateSimulationUI() {
+          const step = getCurrentStepIndex();
+          const completedCount = Math.min(5, step - 1);
+          document.getElementById('step-progress-text').textContent = `${completedCount} / 5`;
+
+          // Update indikator orientasi SSD (tanpa koordinat)
+          const angleDeg = (simState.rotationStep % 4) * 90;
+          const isAligned = angleDeg === 0;
+          const angleBadge = document.getElementById('ssd-angle-badge');
+          if (simState.ssdInstalled) {
+            angleBadge.textContent = 'Terpasang (M.2)';
+            angleBadge.className = 'text-[11px] px-2.5 py-0.5 rounded-full font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+          } else if (isAligned) {
+            angleBadge.textContent = '0° (Sejajar M-Key)';
+            angleBadge.className = 'text-[11px] px-2.5 py-0.5 rounded-full font-bold bg-emerald-400 text-slate-950 border border-emerald-300 shadow-sm';
+          } else {
+            angleBadge.textContent = `${angleDeg}° (Belum Sejajar)`;
+            angleBadge.className = 'text-[11px] px-2.5 py-0.5 rounded-full font-bold bg-amber-400 text-slate-950 border border-amber-300 shadow-sm';
+          }
+
+          // Update rotasi diagram mini SSD M.2 pada panel orientasi
+          const ssdVisualEl = document.getElementById('orientation-ssd-visual');
+          if (ssdVisualEl) {
+            ssdVisualEl.style.transform = `rotate(${angleDeg}deg)`;
+          }
+
+          // Nonaktifkan tombol putar jika SSD sudah terpasang di dalam slot
+          document.getElementById('btn-rotate-ccw').disabled = simState.ssdInstalled;
+          document.getElementById('btn-rotate-cw').disabled = simState.ssdInstalled;
+
+          // Update daftar langkah 1 - 5
+          const stepHints = {
+            1: 'Langkah 1: Klik Slot M.2 pada motherboard untuk melepas heatsink ke meja kanan.',
+            2: 'Langkah 2: Klik kembali Slot M.2 untuk membuka klip pengunci Q-Latch.',
+            3: 'Langkah 3: Putar SSD ke 0° (pin M-Key di kiri), lalu drag ke slot M.2.',
+            4: 'Langkah 4: Klik Slot M.2 untuk mengunci klip Q-Latch di ujung SSD.',
+            5: 'Langkah 5: Klik & seret (drag) heatsink dari bawah SSD ke atas slot M.2.',
+            6: 'Selesai! SSD M.2 NVMe terpasang dan terkunci sempurna.'
+          };
+          document.getElementById('live-instruction-text').textContent = stepHints[step] || stepHints[6];
+
+          for (let i = 1; i <= 5; i++) {
+            const item = document.getElementById(`step-item-${i}`);
+            const badge = item.querySelector('.step-badge');
+            if (i < step) {
+              item.className = 'flex items-start gap-2.5 p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200';
+              badge.className = 'step-badge w-5 h-5 rounded-full bg-emerald-500 text-slate-950 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5';
+              badge.textContent = '✓';
+            } else if (i === step) {
+              item.className = 'flex items-start gap-2.5 p-2 rounded-xl bg-sky-500/15 border border-sky-500/50 text-slate-100';
+              badge.className = 'step-badge w-5 h-5 rounded-full bg-sky-400 text-slate-950 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5';
+              badge.textContent = String(i);
+            } else {
+              item.className = 'flex items-start gap-2.5 p-2 rounded-xl bg-slate-950/70 border border-slate-800 text-slate-400';
+              badge.className = 'step-badge w-5 h-5 rounded-full bg-slate-800 text-slate-400 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5';
+              badge.textContent = String(i);
+            }
+          }
+        }
+
+        // ======================================================================
+        // KONTROL TUTUP / BUKA PANEL PROSEDUR PERAKITAN
+        // ======================================================================
+        const toggleProcBtn = document.getElementById('btn-toggle-procedure');
+        const procContent = document.getElementById('procedure-content');
+        const procChevron = document.getElementById('procedure-chevron');
+        if (toggleProcBtn && procContent && procChevron) {
+          toggleProcBtn.addEventListener('click', () => {
+            const isHidden = procContent.classList.toggle('hidden');
+            toggleProcBtn.setAttribute('aria-expanded', String(!isHidden));
+            procChevron.style.transform = isHidden ? 'rotate(-90deg)' : 'rotate(0deg)';
+          });
+        }
+
+        // ======================================================================
+        // KONTROL ORIENTASI SSD M.2 (HANYA ORIENTASI, TANPA KOORDINAT)
+        // ======================================================================
+        function rotateSSD(deltaSteps) {
+          if (simState.ssdInstalled) {
+            showFeedback('SSD Sudah Terpasang', 'SSD M.2 sudah duduk di dalam slot dan tidak dapat diputar.', 'warn');
+            return;
+          }
+          simState.rotationStep = (simState.rotationStep + deltaSteps + 4) % 4;
+          simState.targetRotationY = -simState.rotationStep * (Math.PI / 2);
+
+          const deg = simState.rotationStep * 90;
+          if (deg === 0) {
+            showFeedback('Orientasi Sejajar (0°)', 'Pin emas M-Key kini menghadap ke kiri sejajar dengan konektor M.2!', 'success');
+          } else {
+            showFeedback(`Orientasi SSD: ${deg}°`, 'Putar hingga 0° agar pin emas M-Key menghadap ke kiri (soket M.2).', 'info');
+          }
+          updateSimulationUI();
+        }
+
+        document.getElementById('btn-rotate-ccw').addEventListener('click', () => rotateSSD(-1));
+        document.getElementById('btn-rotate-cw').addEventListener('click', () => rotateSSD(1));
+
+        window.addEventListener('keydown', (e) => {
+          if (e.key === 'q' || e.key === 'Q') rotateSSD(-1);
+          if (e.key === 'e' || e.key === 'E') rotateSSD(1);
+        });
+
+        // ======================================================================
+        // MEKANIK KLIK BERTAHAP PADA SLOT M.2 & ALUR PENYELESAIAN 3 DETIK
+        // ======================================================================
+        function triggerCompletionSequence() {
+          if (simState.completed) return;
+          simState.completed = true;
+
+          const banner = document.getElementById('countdown-banner');
+          const numEl = document.getElementById('countdown-number');
+          banner.classList.remove('hidden');
+
+          let remaining = 3;
+          numEl.textContent = String(remaining);
+
+          clearInterval(simState.countdownTimer);
+          simState.countdownTimer = setInterval(() => {
+            remaining -= 1;
+            if (remaining > 0) {
+              numEl.textContent = String(remaining);
+            } else {
+              clearInterval(simState.countdownTimer);
+              banner.classList.add('hidden');
+              document.getElementById('choice-modal').classList.remove('hidden');
+            }
+          }, 1000);
+        }
+
+        function handleM2SlotClickStep() {
+          const st = motherboard.state;
+
+          // Tahap pembukaan bertahap sebelum SSD dipasang
+          if (!simState.ssdInstalled) {
+            if (!st.m2HeatsinkRemoved) {
+              st.m2HeatsinkRemoved = true;
+              showFeedback('Langkah 1 Selesai', 'Heatsink dilepas dan disimpan di dudukan bawah SSD. Klik slot M.2 lagi untuk membuka klip Q-Latch.', 'success');
+            } else if (!st.m2LatchOpen) {
+              st.m2LatchOpen = true;
+              showFeedback('Langkah 2 Selesai', 'Klip pengunci Q-Latch dibuka! Sekarang sejajarkan SSD (0°) lalu drag ke slot M.2.', 'success');
+            } else {
+              showFeedback('Slot M.2 Siap Dipasang', 'Seret (click & drag) SSD M.2 dari tray ke dalam slot M.2.', 'info');
+            }
+            updateSimulationUI();
+            return;
+          }
+
+          // Tahap penguncian & panduan pemasangan heatsink setelah SSD dipasang
+          if (st.m2LatchOpen) {
+            st.m2LatchOpen = false;
+            showFeedback('Langkah 4 Selesai', 'SSD ditekan rata dan klip Q-Latch terkunci rapat! Sekarang drag heatsink dari bawah SSD ke slot M.2.', 'success');
+            updateSimulationUI();
+          } else if (st.m2HeatsinkRemoved) {
+            showFeedback('Pasang Heatsink M.2', 'Klik dan seret (drag) heatsink dari dudukan di bawah SSD ke atas slot M.2.', 'info');
+          } else {
+            showFeedback('SSD Terkunci', 'SSD M.2 NVMe sudah terpasang dan terkunci sempurna pada slot M.2.', 'info');
+          }
+        }
+
+        // ======================================================================
+        // INTERAKSI MOUSE / SENTUH: DRAG SSD & HEATSINK + KLIK SLOT M.2
+        // ======================================================================
+        const raycaster = new THREE.Raycaster();
+        const pointerNDC = new THREE.Vector2();
+        const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -1.35);
+        const planeIntersectPt = new THREE.Vector3();
+
+        let isPointerDown = false;
+        let pointerButton = 0;
+        let lastX = 0;
+        let lastY = 0;
+        let movedDistance = 0;
+
+        function updateNDC(clientX, clientY) {
+          const rect = renderer.domElement.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) {
+            pointerNDC.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+            pointerNDC.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+          }
+        }
+
+        // Pelacakan lokasi kursor pada layar untuk menggeser POV (koordinat X & Y saja, Z tetap)
+        window.addEventListener('mousemove', (e) => {
+          const winW = Math.max(1, window.innerWidth);
+          const winH = Math.max(1, window.innerHeight);
+          camState.cursorNormX = Math.max(-1, Math.min(1, (e.clientX / winW) * 2 - 1));
+          camState.cursorNormY = Math.max(-1, Math.min(1, -((e.clientY / winH) * 2 - 1)));
+
+          if (!isPointerDown && !simState.isDraggingSSD && !simState.isDraggingHeatsink) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+              updateNDC(e.clientX, e.clientY);
+              raycaster.setFromCamera(pointerNDC, camera);
+              const canDragSSD = !simState.ssdInstalled && raycaster.intersectObjects(ssd.draggableMeshes, false).length > 0;
+              const canDragHs = motherboard.state.m2HeatsinkRemoved && raycaster.intersectObjects(motherboard.m2HeatsinkClickMeshes, false).length > 0;
+              if (canDragSSD || canDragHs) {
+                container.style.cursor = 'grab';
+              } else {
+                const overSlot = raycaster.intersectObjects(motherboard.m2SlotClickMeshes, false).length > 0 ||
+                                 (!motherboard.state.m2HeatsinkRemoved && raycaster.intersectObjects(motherboard.m2HeatsinkClickMeshes, false).length > 0);
+                container.style.cursor = overSlot ? 'pointer' : 'default';
+              }
+            }
+          }
+        });
+
+        container.addEventListener('mouseleave', () => {
+          camState.cursorNormX = 0;
+          camState.cursorNormY = 0;
+        });
+
+        function onPointerStart(clientX, clientY, button = 0) {
+          isPointerDown = true;
+          pointerButton = button;
+          lastX = clientX;
+          lastY = clientY;
+          movedDistance = 0;
+
+          updateNDC(clientX, clientY);
+          raycaster.setFromCamera(pointerNDC, camera);
+
+          // Cek apakah pengguna menekan SSD atau Heatsink (yang sudah dilepas) untuk di-drag
+          if (button === 0) {
+            if (!simState.ssdInstalled) {
+              const ssdHits = raycaster.intersectObjects(ssd.draggableMeshes, false);
+              if (ssdHits.length > 0) {
+                simState.isDraggingSSD = true;
+                simState.ssdTargetPos.y = 1.35;
+                container.style.cursor = 'grabbing';
+                return;
+              }
+            }
+            if (motherboard.state.m2HeatsinkRemoved) {
+              const hsHits = raycaster.intersectObjects(motherboard.m2HeatsinkClickMeshes, false);
+              if (hsHits.length > 0) {
+                simState.isDraggingHeatsink = true;
+                simState.heatsinkDragWorldPos.set(
+                  mbWorldPos.x + motherboard.pivots.m2Heatsink.position.x,
+                  1.45,
+                  mbWorldPos.z + motherboard.pivots.m2Heatsink.position.z
+                );
+                container.style.cursor = 'grabbing';
+                return;
+              }
+            }
+          }
+        }
+
+        function onPointerMove(clientX, clientY) {
+          if (!isPointerDown) return;
+
+          const dx = clientX - lastX;
+          const dy = clientY - lastY;
+          movedDistance += Math.hypot(dx, dy);
+          lastX = clientX;
+          lastY = clientY;
+
+          if (simState.isDraggingSSD) {
+            updateNDC(clientX, clientY);
+            raycaster.setFromCamera(pointerNDC, camera);
+            if (raycaster.ray.intersectPlane(dragPlane, planeIntersectPt)) {
+              const clampedX = Math.max(-18, Math.min(20, planeIntersectPt.x));
+              const clampedZ = Math.max(-16, Math.min(16, planeIntersectPt.z));
+              simState.ssdTargetPos.set(clampedX, 1.35, clampedZ);
+
+              const distToSlot = Math.hypot(clampedX - slotWorldPos.x, clampedZ - slotWorldPos.z);
+              if (motherboard.pivots.m2HighlightRing) {
+                const isReady = motherboard.state.m2HeatsinkRemoved && motherboard.state.m2LatchOpen && (simState.rotationStep % 4 === 0);
+                motherboard.pivots.m2HighlightRing.material.color.set(isReady ? '#10b981' : '#f59e0b');
+                motherboard.pivots.m2HighlightRing.material.opacity = distToSlot < 6.5 ? 0.95 : 0.25;
+              }
+            }
+          } else if (simState.isDraggingHeatsink) {
+            updateNDC(clientX, clientY);
+            raycaster.setFromCamera(pointerNDC, camera);
+            if (raycaster.ray.intersectPlane(dragPlane, planeIntersectPt)) {
+              const clampedX = Math.max(-18, Math.min(20, planeIntersectPt.x));
+              const clampedZ = Math.max(-16, Math.min(16, planeIntersectPt.z));
+              simState.heatsinkDragWorldPos.set(clampedX, 1.45, clampedZ);
+
+              const distToSlot = Math.hypot(clampedX - slotWorldPos.x, clampedZ - slotWorldPos.z);
+              if (motherboard.pivots.m2HighlightRing) {
+                const isReady = simState.ssdInstalled && !motherboard.state.m2LatchOpen;
+                motherboard.pivots.m2HighlightRing.material.color.set(isReady ? '#10b981' : '#f59e0b');
+                motherboard.pivots.m2HighlightRing.material.opacity = distToSlot < 6.5 ? 0.95 : 0.25;
+              }
+            }
+          }
+        }
+
+        function onPointerEnd(clientX, clientY) {
+          if (simState.isDraggingSSD) {
+            simState.isDraggingSSD = false;
+            container.style.cursor = 'default';
+            if (motherboard.pivots.m2HighlightRing) {
+              motherboard.pivots.m2HighlightRing.material.opacity = 0.0;
+            }
+
+            const distToSlot = Math.hypot(
+              simState.ssdTargetPos.x - slotWorldPos.x,
+              simState.ssdTargetPos.z - slotWorldPos.z
+            );
+
+            if (distToSlot < 4.2) {
+              const st = motherboard.state;
+              if (!st.m2HeatsinkRemoved) {
+                showFeedback('Heatsink Belum Dilepas', 'Klik slot M.2 pada motherboard untuk melepas heatsink pendingin terlebih dahulu!', 'warn');
+                resetSSDTransformToTray();
+                isPointerDown = false;
+                return;
+              }
+              if (!st.m2LatchOpen) {
+                showFeedback('Klip Q-Latch Terkunci', 'Klik slot M.2 pada motherboard untuk membuka klip pengunci Q-Latch terlebih dahulu!', 'warn');
+                resetSSDTransformToTray();
+                isPointerDown = false;
+                return;
+              }
+              if ((simState.rotationStep % 4) !== 0) {
+                showFeedback('Orientasi Salah!', 'Putar SSD hingga 0° agar pin emas M-Key menghadap ke kiri (konektor M.2)!', 'warn');
+                resetSSDTransformToTray();
+                isPointerDown = false;
+                return;
+              }
+
+              // Pasang SSD ke konektor M.2 (ujung kanan masih terangkat hingga Q-Latch dikunci)
+              simState.ssdInstalled = true;
+              simState.ssdTargetPos.set(slotWorldPos.x, 0.26 + 3.95 * Math.sin(0.14), slotWorldPos.z);
+              showFeedback('Langkah 3 Selesai', 'SSD M.2 masuk ke konektor (ujung belakang masih terangkat). Klik slot M.2 untuk menekan & mengunci klip Q-Latch.', 'success');
+              updateSimulationUI();
+            } else {
+              resetSSDTransformToTray();
+            }
+            isPointerDown = false;
+            return;
+          }
+
+          if (simState.isDraggingHeatsink) {
+            simState.isDraggingHeatsink = false;
+            container.style.cursor = 'default';
+            if (motherboard.pivots.m2HighlightRing) {
+              motherboard.pivots.m2HighlightRing.material.opacity = 0.0;
+            }
+
+            const distToSlot = Math.hypot(
+              simState.heatsinkDragWorldPos.x - slotWorldPos.x,
+              simState.heatsinkDragWorldPos.z - slotWorldPos.z
+            );
+
+            if (distToSlot < 4.2) {
+              if (!simState.ssdInstalled) {
+                showFeedback('SSD Belum Terpasang', 'Pasang SSD M.2 NVMe ke slot terlebih dahulu sebelum memasang kembali heatsink!', 'warn');
+                isPointerDown = false;
+                return;
+              }
+              if (motherboard.state.m2LatchOpen) {
+                showFeedback('Klip Q-Latch Terbuka', 'Klik slot M.2 untuk mengunci klip Q-Latch terlebih dahulu sebelum memasang heatsink!', 'warn');
+                isPointerDown = false;
+                return;
+              }
+
+              // Pasang kembali heatsink M.2 presisi di atas slot M.2
+              motherboard.state.m2HeatsinkRemoved = false;
+              showFeedback('Pemasangan Sempurna!', 'Heatsink pendingin terpasang kembali mengamankan suhu kerja SSD M.2 NVMe.', 'success');
+              updateSimulationUI();
+              triggerCompletionSequence();
+            }
+            isPointerDown = false;
+            return;
+          }
+
+          // Deteksi klik pada slot M.2 (atau heatsink saat masih terpasang di motherboard pada Langkah 1)
+          if (isPointerDown && movedDistance < 6 && pointerButton === 0) {
+            updateNDC(clientX, clientY);
+            raycaster.setFromCamera(pointerNDC, camera);
+            const slotHits = raycaster.intersectObjects(motherboard.m2SlotClickMeshes, false);
+            const attachedHeatsinkHits = !motherboard.state.m2HeatsinkRemoved
+              ? raycaster.intersectObjects(motherboard.m2HeatsinkClickMeshes, false)
+              : [];
+            if (slotHits.length > 0 || attachedHeatsinkHits.length > 0) {
+              handleM2SlotClickStep();
+            }
+          }
+
+          isPointerDown = false;
+        }
+
+        container.addEventListener('contextmenu', (e) => e.preventDefault());
+        container.addEventListener('mousedown', (e) => onPointerStart(e.clientX, e.clientY, e.button));
+        window.addEventListener('mousemove', (e) => onPointerMove(e.clientX, e.clientY));
+        window.addEventListener('mouseup', (e) => onPointerEnd(e.clientX, e.clientY));
+
+        // Dukungan Touch Screen
+        container.addEventListener('touchstart', (e) => {
+          if (e.touches.length === 1) {
+            onPointerStart(e.touches[0].clientX, e.touches[0].clientY, 0);
+          }
+        }, { passive: true });
+
+        container.addEventListener('touchmove', (e) => {
+          if (e.touches.length === 1) {
+            onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
+          }
+        }, { passive: true });
+
+        container.addEventListener('touchend', (e) => {
+          if (e.changedTouches.length > 0) {
+            onPointerEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+          }
+        });
+
+        // ======================================================================
+        // RESET SIMULASI & TOMBOL MODAL AKHIR (3 DETIK SETELAH SELESAI)
+        // ======================================================================
+        function resetFullSimulation() {
+          clearInterval(simState.countdownTimer);
+          motherboard.state.m2HeatsinkRemoved = false;
+          motherboard.state.m2LatchOpen = false;
+
+          simState.rotationStep = 1;
+          simState.targetRotationY = -Math.PI / 2;
+          simState.ssdInstalled = false;
+          simState.isDraggingSSD = false;
+          simState.isDraggingHeatsink = false;
+          simState.completed = false;
+          ssd.group.rotation.z = 0;
+          resetSSDTransformToTray();
+
+          document.getElementById('countdown-banner').classList.add('hidden');
+          document.getElementById('choice-modal').classList.add('hidden');
+          document.getElementById('summary-modal').classList.add('hidden');
+          document.getElementById('inspect-mode-bar').classList.add('hidden');
+
+          applyCameraPreset('workbench');
+          updateSimulationUI();
+          showFeedback('Simulasi Direset', 'Meja kerja dan komponen dikembalikan ke kondisi awal.', 'info');
+        }
+
+        document.getElementById('btn-reset-sim').addEventListener('click', resetFullSimulation);
+        document.getElementById('btn-restart-sim').addEventListener('click', resetFullSimulation);
+
+        document.getElementById('btn-inspect-result').addEventListener('click', () => {
+          document.getElementById('choice-modal').classList.add('hidden');
+          document.getElementById('inspect-mode-bar').classList.remove('hidden');
+          applyCameraPreset('slot');
+          showFeedback('Mode Inspeksi Hasil', 'Gunakan preset kamera atau geser kursor untuk melihat hasil pemasangan SSD M.2.', 'info');
+        });
+
+        document.getElementById('btn-finish-game').addEventListener('click', () => {
+          document.getElementById('choice-modal').classList.add('hidden');
+          document.getElementById('inspect-mode-bar').classList.add('hidden');
+          document.getElementById('summary-modal').classList.remove('hidden');
+        });
+
+        document.getElementById('btn-finish-from-inspect').addEventListener('click', () => {
+          document.getElementById('inspect-mode-bar').classList.add('hidden');
+          document.getElementById('summary-modal').classList.remove('hidden');
+        });
+
+        const btnReview = document.getElementById('btn-review-from-summary');
+        if (btnReview) {
+          btnReview.addEventListener('click', () => {
+            document.getElementById('summary-modal').classList.add('hidden');
+            document.getElementById('inspect-mode-bar').classList.remove('hidden');
+          });
+        }
+
+        // ======================================================================
+        // RESIZE OBSERVER & WINDOW RESIZE
+        // ======================================================================
+        function handleViewportResize() {
+          const size = getViewportSize();
+          camera.aspect = size.w / size.h;
+          camera.updateProjectionMatrix();
+          renderer.setSize(size.w, size.h, false);
+        }
+
+        window.addEventListener('resize', handleViewportResize);
+        if (typeof ResizeObserver !== 'undefined') {
+          const ro = new ResizeObserver(() => handleViewportResize());
+          ro.observe(container);
+        }
+        requestAnimationFrame(handleViewportResize);
+        setTimeout(handleViewportResize, 120);
+
+        // ======================================================================
+        // LOOP RENDER & ANIMASI 60 FPS
+        // ======================================================================
+        let lastTime = performance.now();
+
+        function animate(now) {
+          requestAnimationFrame(animate);
+          const dt = Math.min(0.05, (now - lastTime) / 1000);
+          lastTime = now;
+
+          // 1. Interpolasi Kamera & Offset POV Kursor (Hanya Ubah Koordinat X & Y, Z Tetap)
+          const camLerp = Math.min(1, dt * 8);
+          camState.target.lerp(camState.desiredTarget, camLerp);
+          camState.radius += (camState.desiredRadius - camState.radius) * camLerp;
+          camState.theta += (camState.desiredTheta - camState.theta) * camLerp;
+          camState.phi += (camState.desiredPhi - camState.phi) * camLerp;
+
+          const parallaxScale = Math.max(1.6, camState.radius * 0.14);
+          const targetCursorX = camState.cursorNormX * parallaxScale;
+          const targetCursorY = camState.cursorNormY * (parallaxScale * 0.75);
+          camState.cursorOffsetX += (targetCursorX - camState.cursorOffsetX) * camLerp;
+          camState.cursorOffsetY += (targetCursorY - camState.cursorOffsetY) * camLerp;
+
+          const sinPhi = Math.sin(camState.phi);
+          const baseCamX = camState.target.x + camState.radius * sinPhi * Math.sin(camState.theta);
+          const baseCamY = camState.target.y + camState.radius * Math.cos(camState.phi);
+          const baseCamZ = camState.target.z + camState.radius * sinPhi * Math.cos(camState.theta);
+
+          camera.position.set(
+            baseCamX + camState.cursorOffsetX,
+            Math.max(1.5, baseCamY + camState.cursorOffsetY),
+            baseCamZ
+          );
+          camera.lookAt(
+            camState.target.x + camState.cursorOffsetX * 0.65,
+            camState.target.y + camState.cursorOffsetY * 0.65,
+            camState.target.z
+          );
+
+          // 2. Interpolasi Posisi & Orientasi SSD M.2 NVMe
+          // Jika SSD sudah masuk konektor M.2 tetapi Q-Latch belum dikunci, ujung belakang SSD terangkat ~8°
+          const isUnlatchedInSlot = simState.ssdInstalled && motherboard.state.m2LatchOpen;
+          const targetTiltZ = isUnlatchedInSlot ? 0.14 : 0;
+          if (simState.ssdInstalled) {
+            const pivotOffsetY = isUnlatchedInSlot ? 3.95 * Math.sin(targetTiltZ) : 0;
+            simState.ssdTargetPos.set(slotWorldPos.x, 0.26 + pivotOffsetY, slotWorldPos.z);
+          }
+
+          const ssdLerp = Math.min(1, dt * 14);
+          ssd.group.position.lerp(simState.ssdTargetPos, ssdLerp);
+          ssd.group.rotation.y += (simState.targetRotationY - ssd.group.rotation.y) * ssdLerp;
+          ssd.group.rotation.z += (targetTiltZ - ssd.group.rotation.z) * ssdLerp;
+
+          // Bayangan pemandu saat SSD atau Heatsink diangkat/digeser
+          if (simState.isDraggingSSD) {
+            dragShadowMesh.rotation.z = ssd.group.rotation.y;
+            dragShadowMesh.position.set(ssd.group.position.x, 0.42, ssd.group.position.z);
+            dragShadowMesh.material.opacity = 0.25;
+          } else if (simState.isDraggingHeatsink) {
+            dragShadowMesh.rotation.z = 0;
+            dragShadowMesh.position.set(
+              mbWorldPos.x + motherboard.pivots.m2Heatsink.position.x,
+              0.42,
+              mbWorldPos.z + motherboard.pivots.m2Heatsink.position.z
+            );
+            dragShadowMesh.material.opacity = 0.25;
+          } else {
+            dragShadowMesh.material.opacity = 0.0;
+          }
+
+          // 3. Animasi Mekanik Slot M.2 Motherboard
+          motherboard.update(dt, simState.isDraggingHeatsink, simState.heatsinkDragWorldPos, mbWorldPos);
+
+          renderer.render(scene, camera);
+        }
+
+        updateSimulationUI();
+        requestAnimationFrame(animate);
+      } catch (err) {
+        console.error('Error initializing 3D simulation:', err);
+        container.innerHTML = `<div class="flex items-center justify-center h-full p-6 text-center text-xs text-rose-300">Terjadi kesalahan saat memuat tampilan 3D: ${err.message}</div>`;
+      }
+    }
+
+    // Pastikan animasi dimulai setelah window load selesai agar pustaka Three.js & ukuran viewport siap
+    if (document.readyState === 'complete') {
+      initSimulation();
+    } else {
+      window.addEventListener('load', initSimulation);
+    }
+  </script>
+</body>
+</html>

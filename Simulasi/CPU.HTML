@@ -1,0 +1,2137 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulasi 3D: Pemasangan CPU ke Motherboard</title>
+  <!-- Tailwind CSS untuk tata letak UI yang bersih dan responsif -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Three.js r128 untuk rendering 3D interaktif -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- Google Font Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Inter', sans-serif;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #090d16;
+      color: #f1f5f9;
+    }
+    #canvas-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: default;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    /* Custom scrollbar halus untuk panel samping */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(71, 85, 105, 0.8);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 1);
+    }
+  </style>
+</head>
+<body class="flex flex-col md:flex-row h-screen w-screen overflow-hidden bg-slate-950 text-slate-100 select-none">
+
+  <!-- ===================================================================== -->
+  <!-- AREA VIEWPORT 3D UTAMA (MEJA KERJA, MOTHERBOARD MASTER & CPU)         -->
+  <!-- ===================================================================== -->
+  <main class="relative flex-1 h-[55vh] md:h-full w-full overflow-hidden bg-gradient-to-b from-slate-900 via-slate-950 to-black">
+    <div id="canvas-container"></div>
+
+    <!-- Header Overlay Kiri Atas -->
+    <div class="absolute top-3 left-3 sm:top-4 sm:left-4 pointer-events-none flex flex-col gap-1.5 max-w-[88%] sm:max-w-md z-10">
+      <div class="flex items-center gap-2 pointer-events-auto">
+        <a href="../index.html#rakit" class="inline-flex items-center gap-1.5 bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 hover:border-sky-500/50 px-2.5 py-1 rounded-xl text-xs font-medium text-slate-300 hover:text-white transition shadow-lg active:scale-95" title="Kembali ke Beranda">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+          <span>Kembali</span>
+        </a>
+        <div class="inline-flex items-center gap-2 bg-slate-900/90 backdrop-blur-md border border-sky-500/40 px-3 py-1 rounded-xl shadow-lg w-fit">
+          <span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
+          <span class="text-[11px] font-semibold tracking-wider uppercase text-sky-300">Tahap 1 • Perakitan Hardware</span>
+        </div>
+      </div>
+      <h1 class="text-base sm:text-xl font-bold text-white drop-shadow">
+        Pemasangan CPU ke Motherboard
+      </h1>
+      <!-- Petunjuk Langkah Aktif Real-Time -->
+      <div id="live-instruction-pill" class="inline-flex items-center gap-2 text-xs text-amber-200 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-amber-500/40 shadow-md w-fit">
+        <span class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
+        <span id="live-instruction-text">Klik Soket CPU pada motherboard untuk membuka tuas pengunci.</span>
+      </div>
+    </div>
+
+    <!-- Banner Hitung Mundur 3 Detik Setelah CPU Terpasang Sempurna -->
+    <div id="countdown-banner" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20">
+      <div class="bg-slate-900/95 border-2 border-emerald-400/80 backdrop-blur-xl px-6 py-4 rounded-2xl shadow-2xl text-center">
+        <div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-400 text-emerald-300 font-bold text-lg mb-2" id="countdown-number">
+          3
+        </div>
+        <h2 class="text-sm sm:text-base font-bold text-emerald-300">CPU Terpasang Sempurna!</h2>
+        <p class="text-xs text-slate-300 mt-1">Memverifikasi penguncian soket LGA...</p>
+      </div>
+    </div>
+
+    <!-- Tombol Mengambang "Selesaikan Simulasi" saat pengguna memilih "Lihat Hasil Dahulu" -->
+    <div id="inspect-mode-bar" class="hidden absolute top-3 right-3 sm:top-4 sm:right-4 z-20 flex items-center gap-2 bg-slate-900/95 border border-emerald-500/50 backdrop-blur-md px-3 py-2 rounded-2xl shadow-xl">
+      <span class="text-xs text-emerald-300 font-medium hidden sm:inline">Mode Inspeksi Hasil</span>
+      <button id="btn-finish-from-inspect" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow transition active:scale-95">
+        Selesaikan Game
+      </button>
+    </div>
+
+    <!-- Bar Bawah: Preset Sudut Kamera & Petunjuk Navigasi (Bebas Tumpang Tindih) -->
+    <div class="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 flex flex-col xl:flex-row xl:items-center justify-between gap-2 pointer-events-none z-10">
+      <div class="flex flex-wrap items-center gap-1.5 pointer-events-auto">
+        <button data-cam="workbench" class="cam-btn bg-sky-600 text-white border border-sky-400/60 px-2.5 py-1.5 rounded-xl text-xs font-medium shadow-md transition hover:bg-sky-500 active:scale-95">
+          Meja &amp; Komponen
+        </button>
+        <button data-cam="socket" class="cam-btn bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 px-2.5 py-1.5 rounded-xl text-xs font-medium backdrop-blur-md shadow-md transition active:scale-95">
+          Fokus Soket CPU
+        </button>
+        <button data-cam="cpuTray" class="cam-btn bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 px-2.5 py-1.5 rounded-xl text-xs font-medium backdrop-blur-md shadow-md transition active:scale-95">
+          Fokus Processor
+        </button>
+        <button data-cam="topDown" class="cam-btn bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 px-2.5 py-1.5 rounded-xl text-xs font-medium backdrop-blur-md shadow-md transition active:scale-95">
+          Tampak Atas
+        </button>
+      </div>
+
+      <!-- Petunjuk Kontrol Mouse/Sentuh -->
+      <div class="hidden md:flex items-center bg-slate-900/85 backdrop-blur-md border border-slate-800 px-3 py-1.5 rounded-xl text-[11px] text-slate-300 gap-3 w-fit pointer-events-none">
+        <span>🖱️ Klik Soket: Buka/Tutup Bertahap</span>
+        <span>✋ Drag CPU: Pasang ke Soket</span>
+        <span>👀 Gerak Kursor: Geser POV (X/Y)</span>
+      </div>
+    </div>
+
+    <!-- Kotak Pesan / Toast Non-Blocking -->
+    <div id="feedback-toast" class="pointer-events-none absolute top-24 sm:top-4 right-3 sm:right-4 max-w-xs sm:max-w-sm bg-slate-900/95 border border-sky-500/50 text-slate-100 px-3.5 py-2.5 rounded-xl shadow-2xl backdrop-blur-md transition-all duration-300 opacity-0 -translate-y-2 z-20">
+      <div class="flex items-start gap-2.5">
+        <span id="toast-dot" class="mt-1 w-2.5 h-2.5 rounded-full bg-sky-400 shrink-0"></span>
+        <div>
+          <p id="toast-title" class="text-xs font-semibold text-sky-300">Informasi</p>
+          <p id="toast-msg" class="text-xs text-slate-300 mt-0.5 leading-relaxed">Siap merakit.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL PILIHAN SETELAH 3 DETIK CPU TERPASANG SEMPURNA -->
+    <div id="choice-modal" class="hidden absolute inset-0 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 z-30">
+      <div class="bg-slate-900 border border-slate-700/90 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div>
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-emerald-400">Tahap Selesai</span>
+            <h2 class="text-lg font-bold text-white">CPU Berhasil Terpasang!</h2>
+          </div>
+        </div>
+
+        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+          Processor Intel LGA telah terpasang dengan orientasi segitiga emas yang tepat, pelat penahan tertutup, dan tuas pengunci terkunci sempurna. Apa yang ingin Anda lakukan selanjutnya?
+        </p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <button id="btn-inspect-result" class="w-full py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-600 text-xs sm:text-sm font-semibold transition active:scale-95">
+            Lihat Hasil Dahulu
+          </button>
+          <button id="btn-finish-game" class="w-full py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/50 text-xs sm:text-sm font-semibold shadow-lg shadow-emerald-950/50 transition active:scale-95">
+            Selesaikan Game
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL RINGKASAN SELESAI GAME -->
+    <div id="summary-modal" class="hidden absolute inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-40">
+      <div class="bg-slate-900 border border-emerald-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5">
+        <div class="text-center space-y-2">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center text-emerald-300">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <span class="inline-block text-[11px] font-semibold uppercase tracking-widest text-emerald-400">Simulasi Tahap 1 Tuntas</span>
+          <h2 class="text-xl font-bold text-white">Pemasangan CPU Selesai</h2>
+          <p class="text-xs text-slate-300">Seluruh prosedur standar perakitan processor Intel ATX telah diselesaikan dengan benar.</p>
+        </div>
+
+        <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 space-y-2 text-xs">
+          <div class="flex items-center justify-between text-slate-300">
+            <span>1. Pembukaan Soket LGA Bertahap</span>
+            <span class="text-emerald-400 font-semibold">✓ Selesai</span>
+          </div>
+          <div class="flex items-center justify-between text-slate-300">
+            <span>2. Penyelarasan Orientasi Segitiga Emas</span>
+            <span class="text-emerald-400 font-semibold">✓ Tepat (0°)</span>
+          </div>
+          <div class="flex items-center justify-between text-slate-300">
+            <span>3. Penempatan &amp; Penguncian ILM</span>
+            <span class="text-emerald-400 font-semibold">✓ Terkunci</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <a href="../index.html#rakit" id="btn-back-home" class="w-full py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold text-center transition active:scale-95 flex items-center justify-center">
+            Kembali ke Menu
+          </a>
+          <button id="btn-restart-sim" class="w-full py-2.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-md transition active:scale-95">
+            Ulangi Simulasi
+          </button>
+          <a href="RAM.html" id="btn-next-sim" class="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold text-center shadow-md transition active:scale-95 flex items-center justify-center">
+            Simulasi Selanjutnya [Pemasangan RAM]
+          </a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- PANEL KONTROL SAMPING (TERBAGI 2 BAGIAN: ORIENTASI & PROSEDUR)         -->
+  <!-- ===================================================================== -->
+  <aside class="w-full md:w-80 lg:w-96 h-[45vh] md:h-full bg-slate-950 border-t md:border-t-0 md:border-l border-slate-800 flex flex-col p-3 sm:p-3.5 gap-3 z-20 shadow-2xl overflow-y-auto">
+
+    <!-- BAGIAN 1: KARTU ORIENTASI PROCESSOR (TEMA KUNING CERAH) -->
+    <section class="bg-gradient-to-br from-amber-500/15 via-slate-900 to-amber-950/20 border-2 border-amber-400/80 rounded-2xl p-3.5 space-y-3 shrink-0 shadow-lg shadow-amber-500/10">
+      <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-amber-400/30">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shadow-sm shadow-amber-300"></span>
+          <div>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-amber-300">1. Orientasi Processor</h2>
+            <p class="text-[11px] text-amber-200/70">Intel Core LGA • Motherboard ATX</p>
+          </div>
+        </div>
+        <button id="btn-reset-sim" class="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/50 text-xs font-medium transition active:scale-95">
+          Reset
+        </button>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <span class="text-[11px] font-semibold text-amber-200">Sudut Pin 1 Saat Ini:</span>
+        <span id="cpu-angle-badge" class="text-[11px] px-2.5 py-0.5 rounded-full font-bold bg-amber-400 text-slate-950 border border-amber-300 shadow-sm">
+          90° (Belum Sejajar)
+        </span>
+      </div>
+
+      <!-- Diagram Visual Arah Segitiga Emas CPU vs Soket -->
+      <div class="flex items-center justify-between gap-3 bg-slate-950/90 border border-amber-400/40 rounded-xl p-3 shadow-inner">
+        <div class="space-y-1">
+          <p class="text-xs font-bold text-amber-300">Penyelarasan Pin 1</p>
+          <p class="text-[11px] text-slate-300 leading-relaxed">
+            Putar CPU hingga tanda <span class="text-amber-300 font-bold underline decoration-amber-400">Segitiga Emas (▲)</span> berada di pojok <span class="text-white font-semibold">kiri bawah</span>, sejajar dengan segitiga pada soket.
+          </p>
+        </div>
+        <!-- Mini Indikator Visual Arah Segitiga CPU -->
+        <div class="relative w-14 h-16 rounded-lg bg-amber-950/60 border-2 border-amber-400 shrink-0 flex items-center justify-center shadow-md">
+          <div class="w-9 h-11 rounded bg-slate-800/80 border border-amber-300/40 flex items-center justify-center">
+            <span class="text-[9px] font-bold text-amber-200 tracking-tighter">CPU</span>
+          </div>
+          <!-- Titik Segitiga Emas yang Berputar Sesuai Orientasi CPU -->
+          <div id="orientation-indicator-dot" class="absolute w-3.5 h-3.5 bg-amber-400 shadow-md transition-all duration-300" style="bottom: 3px; left: 3px; clip-path: polygon(0 0, 0 100%, 100% 100%);"></div>
+        </div>
+      </div>
+
+      <!-- Tombol Putar Orientasi Kiri / Kanan -->
+      <div class="grid grid-cols-2 gap-2">
+        <button id="btn-rotate-ccw" class="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-100 border border-amber-400/60 text-xs font-semibold transition active:scale-95 disabled:opacity-40 disabled:pointer-events-none shadow-sm">
+          <svg class="w-4 h-4 text-amber-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+          </svg>
+          Putar Kiri (-90°)
+        </button>
+        <button id="btn-rotate-cw" class="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-100 border border-amber-400/60 text-xs font-semibold transition active:scale-95 disabled:opacity-40 disabled:pointer-events-none shadow-sm">
+          Putar Kanan (+90°)
+          <svg class="w-4 h-4 text-amber-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 10H11a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6" />
+          </svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- BAGIAN 2: KARTU PROSEDUR PERAKITAN (DAPAT DITUTUP/DIBUKA) -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex flex-col flex-1 min-h-0 shadow-lg">
+      <button id="btn-toggle-procedure" type="button" aria-expanded="true" class="w-full flex items-center justify-between text-left focus:outline-none group">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <h3 class="text-xs font-bold uppercase tracking-wider text-white group-hover:text-emerald-300 transition">2. Prosedur Perakitan</h3>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="step-progress-text" class="text-[11px] font-mono text-slate-400">0 / 6</span>
+          <span class="w-6 h-6 rounded-lg bg-slate-800 group-hover:bg-slate-700 border border-slate-700/80 flex items-center justify-center text-slate-300 transition">
+            <svg id="procedure-chevron" class="w-3.5 h-3.5 transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </span>
+        </div>
+      </button>
+
+      <div id="procedure-content" class="mt-3 pt-3 border-t border-slate-800/80 overflow-y-auto pr-0.5">
+        <ol class="space-y-2 text-xs">
+          <li id="step-item-1" class="flex items-start gap-2.5 p-2 rounded-xl bg-sky-500/10 border border-sky-500/40 text-slate-100">
+            <span class="step-badge w-5 h-5 rounded-full bg-sky-500 text-slate-950 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">1</span>
+            <div>
+              <p class="font-semibold">Buka Tuas Pengunci Soket</p>
+              <p class="text-[11px] text-slate-400">Klik pada soket CPU di motherboard.</p>
+            </div>
+          </li>
+
+          <li id="step-item-2" class="flex items-start gap-2.5 p-2 rounded-xl bg-slate-950/70 border border-slate-800 text-slate-400">
+            <span class="step-badge w-5 h-5 rounded-full bg-slate-800 text-slate-400 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">2</span>
+            <div>
+              <p class="font-semibold">Angkat Pelat Penahan (Load Plate)</p>
+              <p class="text-[11px] text-slate-500">Klik kembali soket CPU untuk membuka bingkai logam.</p>
+            </div>
+          </li>
+
+          <li id="step-item-3" class="flex items-start gap-2.5 p-2 rounded-xl bg-slate-950/70 border border-slate-800 text-slate-400">
+            <span class="step-badge w-5 h-5 rounded-full bg-slate-800 text-slate-400 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">3</span>
+            <div>
+              <p class="font-semibold">Lepas Tutup Pelindung Pin (PnP Cap)</p>
+              <p class="text-[11px] text-slate-500">Klik soket CPU untuk melepas tutup pelindung pin LGA.</p>
+            </div>
+          </li>
+
+          <li id="step-item-4" class="flex items-start gap-2.5 p-2 rounded-xl bg-slate-950/70 border border-slate-800 text-slate-400">
+            <span class="step-badge w-5 h-5 rounded-full bg-slate-800 text-slate-400 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">4</span>
+            <div>
+              <p class="font-semibold">Sejajarkan &amp; Drag CPU ke Soket</p>
+              <p class="text-[11px] text-slate-500">Atur orientasi 0°, lalu klik &amp; seret CPU ke dalam soket.</p>
+            </div>
+          </li>
+
+          <li id="step-item-5" class="flex items-start gap-2.5 p-2 rounded-xl bg-slate-950/70 border border-slate-800 text-slate-400">
+            <span class="step-badge w-5 h-5 rounded-full bg-slate-800 text-slate-400 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">5</span>
+            <div>
+              <p class="font-semibold">Tutup Pelat Penahan (Load Plate)</p>
+              <p class="text-[11px] text-slate-500">Klik soket CPU untuk menurunkan penahan di atas CPU.</p>
+            </div>
+          </li>
+
+          <li id="step-item-6" class="flex items-start gap-2.5 p-2 rounded-xl bg-slate-950/70 border border-slate-800 text-slate-400">
+            <span class="step-badge w-5 h-5 rounded-full bg-slate-800 text-slate-400 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">6</span>
+            <div>
+              <p class="font-semibold">Kunci Tuas Pengunci (Retention Lever)</p>
+              <p class="text-[11px] text-slate-500">Klik soket CPU untuk mengunci penuh processor.</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+  </aside>
+
+  <script>
+    /**
+     * ============================================================================
+     * 1. GENERATOR TEKSTUR PROSEDURAL (KONSISTEN DENGAN MASTER BLUEPRINT)
+     * ============================================================================
+     */
+    class ProceduralTextures {
+      static createPCBTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 1280;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#131720';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < canvas.width; i += 8) {
+          ctx.beginPath();
+          ctx.moveTo(i, 0);
+          ctx.lineTo(i, canvas.height);
+          ctx.stroke();
+        }
+        for (let j = 0; j < canvas.height; j += 8) {
+          ctx.beginPath();
+          ctx.moveTo(0, j);
+          ctx.lineTo(canvas.width, j);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = '#1e2636';
+        ctx.lineWidth = 2.5;
+
+        for (let i = 0; i < 18; i++) {
+          const yStart = 230 + i * 11;
+          ctx.beginPath();
+          ctx.moveTo(540, yStart);
+          ctx.lineTo(595, yStart - 18);
+          ctx.lineTo(665, yStart - 18);
+          ctx.stroke();
+        }
+
+        for (let i = 0; i < 16; i++) {
+          const xStart = 350 + i * 10;
+          ctx.beginPath();
+          ctx.moveTo(xStart, 415);
+          ctx.lineTo(xStart - 12, 480);
+          ctx.lineTo(xStart - 12, 680);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.16)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(80, 960);
+        ctx.lineTo(340, 1180);
+        ctx.lineTo(940, 1180);
+        ctx.stroke();
+
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = 'bold 24px Inter, sans-serif';
+        ctx.fillText('INTEL ATX-Z790 MASTER', 110, 920);
+
+        ctx.font = '600 14px monospace';
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText('REV 1.0 • DESIGNED FOR 3D SIMULATION', 110, 944);
+
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = 'bold 13px monospace';
+        ctx.fillText('LGA 1700 / 1851', 395, 192);
+        ctx.fillText('DIMM_A1  A2  B1  B2', 662, 130);
+        ctx.fillText('M.2_1 (SOCKET 3) PCIe 5.0 x4', 285, 535);
+        ctx.fillText('PCIEX16 (GEN 5.0)', 235, 675);
+        ctx.fillText('PCIEX4_1', 235, 825);
+        ctx.fillText('PCIEX1_1', 235, 965);
+        ctx.fillText('ATX_PWR 24-PIN', 855, 385);
+        ctx.fillText('CPU_PWR 8+8', 180, 42);
+        ctx.fillText('SATA6G_1-4', 865, 1115);
+        ctx.fillText('F_PANEL', 780, 1235);
+
+        const mountingHoles = [
+          [48, 52], [512, 52], [965, 52],
+          [48, 635], [512, 635], [965, 635],
+          [48, 1210], [512, 1210], [965, 1210]
+        ];
+        mountingHoles.forEach(([hx, hy]) => {
+          ctx.beginPath();
+          ctx.arc(hx, hy, 15, 0, Math.PI * 2);
+          ctx.fillStyle = '#d4af37';
+          ctx.fill();
+
+          for (let a = 0; a < 8; a++) {
+            const rad = (a / 8) * Math.PI * 2;
+            ctx.beginPath();
+            ctx.arc(hx + Math.cos(rad) * 11, hy + Math.sin(rad) * 11, 1.8, 0, Math.PI * 2);
+            ctx.fillStyle = '#1e293b';
+            ctx.fill();
+          }
+
+          ctx.beginPath();
+          ctx.arc(hx, hy, 7, 0, Math.PI * 2);
+          ctx.fillStyle = '#090d14';
+          ctx.fill();
+        });
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.anisotropy = 8;
+        return texture;
+      }
+
+      static createLGAPinsTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#18181b';
+        ctx.fillRect(0, 0, 512, 512);
+
+        const step = 7;
+        for (let y = 24; y < 488; y += step) {
+          for (let x = 24; x < 488; x += step) {
+            if (x > 195 && x < 317 && y > 185 && y < 327) continue;
+            ctx.fillStyle = (x + y) % 14 === 0 ? '#facc15' : '#ca8a04';
+            ctx.fillRect(x, y, 3.5, 3.5);
+          }
+        }
+
+        ctx.fillStyle = '#27272a';
+        ctx.fillRect(200, 190, 112, 132);
+        ctx.fillStyle = '#92400e';
+        for (let cy = 205; cy < 310; cy += 18) {
+          for (let cx = 212; cx < 300; cx += 22) {
+            ctx.fillRect(cx, cy, 12, 7);
+          }
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.anisotropy = 8;
+        return texture;
+      }
+
+      static createBrushedMetalTexture(baseHex = '#272e3b', lineHex = '#384252') {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = baseHex;
+        ctx.fillRect(0, 0, 256, 256);
+
+        ctx.strokeStyle = lineHex;
+        ctx.lineWidth = 1;
+        for (let y = 0; y < 256; y += 2) {
+          ctx.globalAlpha = 0.25 + Math.random() * 0.35;
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(256, y);
+          ctx.stroke();
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        return texture;
+      }
+
+      /**
+       * Tekstur permukaan atas IHS (Integrated Heat Spreader) Processor Intel Core LGA.
+       */
+      static createCPUIHSTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+
+        // Nickel-plated brushed metallic base
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillRect(0, 0, 512, 512);
+
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 1.5;
+        for (let y = 0; y < 512; y += 3) {
+          ctx.globalAlpha = 0.22;
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(512, y);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+
+        // Border halus IHS
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 10;
+        ctx.strokeRect(16, 16, 480, 480);
+
+        // Laser-etched Intel Core branding & specs
+        ctx.fillStyle = '#334155';
+        ctx.font = 'bold 34px Inter, sans-serif';
+        ctx.fillText('intel', 76, 120);
+
+        ctx.font = 'bold 28px Inter, sans-serif';
+        ctx.fillText('CORE™ i9', 76, 165);
+
+        ctx.font = '600 22px monospace';
+        ctx.fillStyle = '#475569';
+        ctx.fillText('i9-14900K', 76, 210);
+        ctx.fillText('SRN48  3.20GHZ', 76, 245);
+        ctx.fillText('L342B819', 76, 280);
+
+        // Indikator segitiga kecil pada IHS di pojok kiri bawah (Pin 1)
+        ctx.fillStyle = '#b45309';
+        ctx.beginPath();
+        ctx.moveTo(42, 470);
+        ctx.lineTo(84, 470);
+        ctx.lineTo(42, 428);
+        ctx.closePath();
+        ctx.fill();
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.anisotropy = 8;
+        return texture;
+      }
+
+      /**
+       * Tekstur Matras Anti-Statis (ESD Mat) untuk Meja Kerja Teknisi.
+       */
+      static createESDMatTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 1024;
+        const ctx = canvas.getContext('2d');
+
+        // Permukaan karet ESD biru-abu gelap
+        ctx.fillStyle = '#162032';
+        ctx.fillRect(0, 0, 1024, 1024);
+
+        // Grid presisi 1 cm
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.12)';
+        ctx.lineWidth = 1.5;
+        const step = 32;
+        for (let x = 0; x <= 1024; x += step) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, 1024);
+          ctx.stroke();
+        }
+        for (let y = 0; y <= 1024; y += step) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(1024, y);
+          ctx.stroke();
+        }
+
+        // Border teknis matras ESD
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+        ctx.lineWidth = 6;
+        ctx.strokeRect(20, 20, 984, 984);
+
+        // Label ESD Work Surface
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
+        ctx.font = 'bold 18px monospace';
+        ctx.fillText('ESD SAFE WORKBENCH MAT • ANTI-STATIC SURFACE', 44, 982);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.anisotropy = 8;
+        return texture;
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 2. MODEL MASTER MOTHERBOARD INTEL ATX (100% KONSISTEN DENGAN TAHAP MASTER)
+     * ============================================================================
+     */
+    class MotherboardMaster3D {
+      constructor() {
+        this.group = new THREE.Group();
+        this.group.name = 'Intel_ATX_Master_Motherboard';
+
+        this.dimensions = {
+          width: 24.4,
+          length: 30.5,
+          thickness: 0.24
+        };
+
+        this.anchors = {
+          cpu: new THREE.Vector3(-1.5, 0.22, -7.2),
+          ram: [
+            new THREE.Vector3(3.8, 0.25, -7.2),
+            new THREE.Vector3(4.8, 0.25, -7.2),
+            new THREE.Vector3(5.8, 0.25, -7.2),
+            new THREE.Vector3(6.8, 0.25, -7.2)
+          ],
+          ssd: new THREE.Vector3(-1.4, 0.24, -1.6),
+          gpu: new THREE.Vector3(-1.2, 0.28, 1.6)
+        };
+
+        this.state = {
+          cpuLeverOpen: false,
+          cpuLoadPlateOpen: false,
+          cpuCoverRemoved: false,
+          ramLatchesOpen: [false, false, false, false],
+          m2HeatsinkRemoved: false,
+          m2LatchOpen: false,
+          pcieLatchOpen: false
+        };
+
+        // Mesh khusus area soket CPU untuk deteksi klik bertahap
+        this.cpuSocketClickMeshes = [];
+
+        this.pivots = {
+          cpuLever: null,
+          cpuLoadPlate: null,
+          cpuCover: null,
+          socketHighlightRing: null,
+          ramTopLatches: [],
+          ramBottomLatches: [],
+          m2Heatsink: null,
+          m2Latch: null,
+          pcieLatch: null
+        };
+
+        this._initMaterials();
+        this._buildPCB();
+        this._buildVRMAndIO();
+        this._buildCPUSocketMechanism();
+        this._buildRAMSlotsMechanism();
+        this._buildM2SlotMechanism();
+        this._buildPCIeSlotsMechanism();
+        this._buildPowerAndChipsetDetails();
+      }
+
+      _initMaterials() {
+        const pcbTex = ProceduralTextures.createPCBTexture();
+        const darkMetalTex = ProceduralTextures.createBrushedMetalTexture('#232a36', '#334155');
+        const silverMetalTex = ProceduralTextures.createBrushedMetalTexture('#94a3b8', '#cbd5e1');
+
+        this.materials = {
+          pcbTop: new THREE.MeshStandardMaterial({
+            map: pcbTex,
+            roughness: 0.48,
+            metalness: 0.15
+          }),
+          pcbEdge: new THREE.MeshStandardMaterial({
+            color: '#1e293b',
+            roughness: 0.6,
+            metalness: 0.2
+          }),
+          heatsinkDark: new THREE.MeshStandardMaterial({
+            map: darkMetalTex,
+            roughness: 0.35,
+            metalness: 0.78
+          }),
+          heatsinkSilver: new THREE.MeshStandardMaterial({
+            map: silverMetalTex,
+            roughness: 0.28,
+            metalness: 0.85
+          }),
+          chromeSteel: new THREE.MeshStandardMaterial({
+            color: '#d1d5db',
+            roughness: 0.22,
+            metalness: 0.92
+          }),
+          darkPlastic: new THREE.MeshStandardMaterial({
+            color: '#18181b',
+            roughness: 0.55,
+            metalness: 0.08
+          }),
+          grayPlastic: new THREE.MeshStandardMaterial({
+            color: '#475569',
+            roughness: 0.5,
+            metalness: 0.1
+          }),
+          goldPin: new THREE.MeshStandardMaterial({
+            color: '#fbbf24',
+            roughness: 0.22,
+            metalness: 0.95
+          }),
+          accentCyan: new THREE.MeshStandardMaterial({
+            color: '#0ea5e9',
+            emissive: '#0284c7',
+            emissiveIntensity: 0.35,
+            roughness: 0.3,
+            metalness: 0.4
+          }),
+          thermalPad: new THREE.MeshStandardMaterial({
+            color: '#38bdf8',
+            roughness: 0.85,
+            metalness: 0.05
+          })
+        };
+      }
+
+      _registerCpuSocketHitbox(mesh) {
+        this.cpuSocketClickMeshes.push(mesh);
+      }
+
+      _buildPCB() {
+        const { width, length, thickness } = this.dimensions;
+        const geo = new THREE.BoxGeometry(width, thickness, length);
+        const materials = [
+          this.materials.pcbEdge,
+          this.materials.pcbEdge,
+          this.materials.pcbTop,
+          this.materials.pcbEdge,
+          this.materials.pcbEdge,
+          this.materials.pcbEdge
+        ];
+        const pcbMesh = new THREE.Mesh(geo, materials);
+        pcbMesh.position.y = -thickness / 2;
+        pcbMesh.receiveShadow = true;
+        pcbMesh.castShadow = true;
+        this.group.add(pcbMesh);
+
+        const backplate = new THREE.Mesh(
+          new THREE.BoxGeometry(5.4, 0.14, 5.4),
+          this.materials.chromeSteel
+        );
+        backplate.position.set(this.anchors.cpu.x, -thickness - 0.07, this.anchors.cpu.z);
+        this.group.add(backplate);
+      }
+
+      _buildVRMAndIO() {
+        const vrmGroup = new THREE.Group();
+
+        const ioBase = new THREE.Mesh(
+          new THREE.BoxGeometry(4.4, 2.3, 13.8),
+          this.materials.heatsinkDark
+        );
+        ioBase.position.set(-9.8, 1.15, -7.8);
+        ioBase.castShadow = true;
+        ioBase.receiveShadow = true;
+        vrmGroup.add(ioBase);
+
+        const ioTopPlate = new THREE.Mesh(
+          new THREE.BoxGeometry(3.8, 0.25, 13.2),
+          this.materials.heatsinkSilver
+        );
+        ioTopPlate.position.set(-9.6, 2.42, -7.8);
+        vrmGroup.add(ioTopPlate);
+
+        const ioAccentStrip = new THREE.Mesh(
+          new THREE.BoxGeometry(0.18, 0.08, 11.5),
+          this.materials.accentCyan
+        );
+        ioAccentStrip.position.set(-8.2, 2.56, -7.8);
+        vrmGroup.add(ioAccentStrip);
+
+        const portOffsets = [-13.2, -11.4, -9.6, -7.6, -5.6, -3.5];
+        portOffsets.forEach((pz, idx) => {
+          const portHousing = new THREE.Mesh(
+            new THREE.BoxGeometry(0.6, 1.35, 1.35),
+            idx === 3 ? this.materials.accentCyan : this.materials.chromeSteel
+          );
+          portHousing.position.set(-12.05, 0.85, pz);
+          vrmGroup.add(portHousing);
+        });
+
+        const topVrm = new THREE.Mesh(
+          new THREE.BoxGeometry(8.8, 1.75, 2.4),
+          this.materials.heatsinkDark
+        );
+        topVrm.position.set(-1.5, 0.875, -12.6);
+        topVrm.castShadow = true;
+        topVrm.receiveShadow = true;
+        vrmGroup.add(topVrm);
+
+        for (let i = 0; i < 6; i++) {
+          const fin = new THREE.Mesh(
+            new THREE.BoxGeometry(8.6, 0.18, 0.16),
+            this.materials.heatsinkSilver
+          );
+          fin.position.set(-1.5, 1.82, -13.5 + i * 0.36);
+          vrmGroup.add(fin);
+        }
+
+        const chokeGeo = new THREE.BoxGeometry(0.75, 0.55, 0.75);
+        const capGeo = new THREE.CylinderGeometry(0.24, 0.24, 0.65, 16);
+
+        for (let i = 0; i < 7; i++) {
+          const cz = -10.5 + i * 1.05;
+          const choke = new THREE.Mesh(chokeGeo, this.materials.grayPlastic);
+          choke.position.set(-6.4, 0.275, cz);
+          vrmGroup.add(choke);
+
+          const cap = new THREE.Mesh(capGeo, this.materials.chromeSteel);
+          cap.position.set(-5.45, 0.325, cz);
+          vrmGroup.add(cap);
+        }
+
+        for (let i = 0; i < 6; i++) {
+          const cx = -4.5 + i * 1.15;
+          const choke = new THREE.Mesh(chokeGeo, this.materials.grayPlastic);
+          choke.position.set(cx, 0.275, -10.7);
+          vrmGroup.add(choke);
+
+          const cap = new THREE.Mesh(capGeo, this.materials.chromeSteel);
+          cap.position.set(cx, 0.325, -9.85);
+          vrmGroup.add(cap);
+        }
+
+        this.group.add(vrmGroup);
+      }
+
+      _buildCPUSocketMechanism() {
+        const socketRoot = new THREE.Group();
+        socketRoot.position.set(this.anchors.cpu.x, 0, this.anchors.cpu.z);
+
+        const baseFrame = new THREE.Mesh(
+          new THREE.BoxGeometry(4.7, 0.22, 4.9),
+          this.materials.darkPlastic
+        );
+        baseFrame.position.y = 0.11;
+        baseFrame.receiveShadow = true;
+        socketRoot.add(baseFrame);
+        this._registerCpuSocketHitbox(baseFrame);
+
+        const pinsTex = ProceduralTextures.createLGAPinsTexture();
+        const pinBedMat = new THREE.MeshStandardMaterial({
+          map: pinsTex,
+          roughness: 0.3,
+          metalness: 0.85
+        });
+        const pinBed = new THREE.Mesh(
+          new THREE.PlaneGeometry(3.75, 4.15),
+          pinBedMat
+        );
+        pinBed.rotation.x = -Math.PI / 2;
+        pinBed.position.y = 0.225;
+        socketRoot.add(pinBed);
+        this._registerCpuSocketHitbox(pinBed);
+
+        const wallThick = 0.28;
+        const wallH = 0.16;
+        const topWall = new THREE.Mesh(new THREE.BoxGeometry(4.4, wallH, wallThick), this.materials.darkPlastic);
+        topWall.position.set(0, 0.28, -2.25);
+        const botWall = new THREE.Mesh(new THREE.BoxGeometry(4.4, wallH, wallThick), this.materials.darkPlastic);
+        botWall.position.set(0, 0.28, 2.25);
+        const leftWall = new THREE.Mesh(new THREE.BoxGeometry(wallThick, wallH, 4.7), this.materials.darkPlastic);
+        leftWall.position.set(-2.05, 0.28, 0);
+        const rightWall = new THREE.Mesh(new THREE.BoxGeometry(wallThick, wallH, 4.7), this.materials.darkPlastic);
+        rightWall.position.set(2.05, 0.28, 0);
+        socketRoot.add(topWall, botWall, leftWall, rightWall);
+        [topWall, botWall, leftWall, rightWall].forEach((w) => this._registerCpuSocketHitbox(w));
+
+        // Tanda Segitiga Emas Pin 1 di pojok kiri bawah soket
+        const triShape = new THREE.Shape();
+        triShape.moveTo(0, 0);
+        triShape.lineTo(0.45, 0);
+        triShape.lineTo(0, 0.45);
+        triShape.closePath();
+        const triGeo = new THREE.ShapeGeometry(triShape);
+        const pin1Triangle = new THREE.Mesh(triGeo, this.materials.goldPin);
+        pin1Triangle.rotation.x = -Math.PI / 2;
+        pin1Triangle.position.set(-1.82, 0.232, 1.95);
+        socketRoot.add(pin1Triangle);
+
+        // Bingkai garis kuning penanda soket CPU interaktif
+        const socketInterGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(5.0, 0.45, 5.2));
+        const socketInterMat = new THREE.LineBasicMaterial({
+          color: 0xfbbf24,
+          linewidth: 3,
+          transparent: true,
+          opacity: 0.95
+        });
+        const socketInterBox = new THREE.LineSegments(socketInterGeo, socketInterMat);
+        socketInterBox.position.y = 0.28;
+        socketRoot.add(socketInterBox);
+        this.pivots.socketInteractiveBox = socketInterBox;
+
+        // Bingkai panduan tipis tepat di tepi soket (hanya menyala saat CPU sedang di-drag ke dekat soket)
+        const guideGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(4.85, 0.42, 5.05));
+        const guideMat = new THREE.LineBasicMaterial({ color: '#38bdf8', transparent: true, opacity: 0.0 });
+        const guideBox = new THREE.LineSegments(guideGeo, guideMat);
+        guideBox.position.y = 0.24;
+        socketRoot.add(guideBox);
+        this.pivots.socketHighlightRing = guideBox;
+
+        // PIVOT 1: PELAT PENAHAN LOGAM (ILM LOAD PLATE)
+        const loadPlatePivot = new THREE.Group();
+        loadPlatePivot.position.set(0, 0.36, -2.42);
+
+        const plateMat = this.materials.chromeSteel;
+        const pTop = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.08, 0.65), plateMat);
+        pTop.position.set(0, 0.04, 0.35);
+        const pBot = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.08, 0.75), plateMat);
+        pBot.position.set(0, 0.04, 4.55);
+        const pLeft = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.08, 4.8), plateMat);
+        pLeft.position.set(-1.98, 0.04, 2.42);
+        const pRight = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.08, 4.8), plateMat);
+        pRight.position.set(1.98, 0.04, 2.42);
+        const pTongue = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.08, 0.55), plateMat);
+        pTongue.position.set(0, 0.02, 5.15);
+
+        loadPlatePivot.add(pTop, pBot, pLeft, pRight, pTongue);
+        [pTop, pBot, pLeft, pRight, pTongue].forEach((m) => {
+          m.castShadow = true;
+          this._registerCpuSocketHitbox(m);
+        });
+
+        // PIVOT 2: TUTUP PELINDUNG PIN (PnP CAP)
+        const coverPivot = new THREE.Group();
+        coverPivot.position.set(0, 0.14, 2.42);
+
+        const pnpCap = new THREE.Mesh(
+          new THREE.BoxGeometry(3.85, 0.12, 4.25),
+          this.materials.darkPlastic
+        );
+        pnpCap.castShadow = true;
+        this._registerCpuSocketHitbox(pnpCap);
+
+        const capGrip = new THREE.Mesh(
+          new THREE.BoxGeometry(1.6, 0.1, 0.8),
+          this.materials.grayPlastic
+        );
+        capGrip.position.y = 0.09;
+        this._registerCpuSocketHitbox(capGrip);
+
+        coverPivot.add(pnpCap, capGrip);
+        loadPlatePivot.add(coverPivot);
+        socketRoot.add(loadPlatePivot);
+
+        // PIVOT 3: TUAS PENGUNCI SOKET (RETENTION LEVER)
+        const leverPivot = new THREE.Group();
+        leverPivot.position.set(2.58, 0.26, 2.25);
+
+        const leverShaft = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.085, 0.085, 5.1, 12),
+          this.materials.chromeSteel
+        );
+        leverShaft.rotation.x = Math.PI / 2;
+        leverShaft.position.set(0, 0.08, -2.55);
+
+        const leverHandle = new THREE.Mesh(
+          new THREE.BoxGeometry(0.55, 0.14, 0.35),
+          this.materials.chromeSteel
+        );
+        leverHandle.position.set(0.22, 0.08, -5.05);
+
+        const leverCam = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.11, 0.11, 0.85, 12),
+          this.materials.chromeSteel
+        );
+        leverCam.rotation.z = Math.PI / 2;
+        leverCam.position.set(-0.35, 0.05, 0);
+
+        leverPivot.add(leverShaft, leverHandle, leverCam);
+        [leverShaft, leverHandle].forEach((m) => {
+          m.castShadow = true;
+          this._registerCpuSocketHitbox(m);
+        });
+        socketRoot.add(leverPivot);
+
+        this.pivots.cpuLoadPlate = loadPlatePivot;
+        this.pivots.cpuCover = coverPivot;
+        this.pivots.cpuLever = leverPivot;
+
+        this.group.add(socketRoot);
+      }
+
+      _buildRAMSlotsMechanism() {
+        const ramGroup = new THREE.Group();
+        const slotLength = 13.4;
+        const slotWidth = 0.62;
+        const slotHeight = 0.72;
+
+        this.anchors.ram.forEach((anchor, idx) => {
+          const singleSlot = new THREE.Group();
+          singleSlot.position.set(anchor.x, 0, anchor.z);
+
+          const housingMat = idx % 2 === 0 ? this.materials.grayPlastic : this.materials.darkPlastic;
+          const notchZ = 0.55;
+          const topLen = slotLength / 2 + notchZ - 0.18;
+          const botLen = slotLength / 2 - notchZ - 0.18;
+
+          const topBody = new THREE.Mesh(new THREE.BoxGeometry(slotWidth, slotHeight, topLen), housingMat);
+          topBody.position.set(0, slotHeight / 2, -slotLength / 2 + topLen / 2);
+          topBody.castShadow = true;
+
+          const botBody = new THREE.Mesh(new THREE.BoxGeometry(slotWidth, slotHeight, botLen), housingMat);
+          botBody.position.set(0, slotHeight / 2, slotLength / 2 - botLen / 2);
+          botBody.castShadow = true;
+
+          const keyBridge = new THREE.Mesh(new THREE.BoxGeometry(slotWidth * 0.85, slotHeight * 0.75, 0.28), housingMat);
+          keyBridge.position.set(0, slotHeight * 0.375, notchZ);
+
+          const goldStrip = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.12, slotLength - 0.8), this.materials.goldPin);
+          goldStrip.position.set(0, slotHeight - 0.14, 0);
+
+          singleSlot.add(topBody, botBody, keyBridge, goldStrip);
+
+          const topLatch = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.95, 0.42), this.materials.chromeSteel);
+          topLatch.position.set(0, 0.67, -slotLength / 2 - 0.13);
+          const botLatch = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.95, 0.42), this.materials.chromeSteel);
+          botLatch.position.set(0, 0.67, slotLength / 2 + 0.13);
+          singleSlot.add(topLatch, botLatch);
+
+          ramGroup.add(singleSlot);
+        });
+
+        this.group.add(ramGroup);
+      }
+
+      _buildM2SlotMechanism() {
+        const m2Group = new THREE.Group();
+        const { x, z } = this.anchors.ssd;
+
+        const connector = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.42, 2.35), this.materials.darkPlastic);
+        connector.position.set(x - 4.0, 0.21, z);
+
+        const hsBody = new THREE.Mesh(new THREE.BoxGeometry(8.5, 0.34, 2.35), this.materials.heatsinkDark);
+        hsBody.position.set(x, 0.63, z);
+        hsBody.castShadow = true;
+
+        const hsTop = new THREE.Mesh(new THREE.BoxGeometry(7.8, 0.08, 1.6), this.materials.heatsinkSilver);
+        hsTop.position.set(x, 0.82, z);
+
+        m2Group.add(connector, hsBody, hsTop);
+        this.group.add(m2Group);
+      }
+
+      _buildPCIeSlotsMechanism() {
+        const pcieGroup = new THREE.Group();
+        const { x, z } = this.anchors.gpu;
+        const slotLen = 13.8;
+
+        const x16Group = new THREE.Group();
+        x16Group.position.set(x, 0, z);
+
+        const innerPlastic = new THREE.Mesh(new THREE.BoxGeometry(slotLen, 0.68, 0.72), this.materials.darkPlastic);
+        innerPlastic.position.y = 0.34;
+        const steelArmor = new THREE.Mesh(new THREE.BoxGeometry(slotLen + 0.16, 0.64, 0.84), this.materials.chromeSteel);
+        steelArmor.position.y = 0.32;
+        steelArmor.castShadow = true;
+        const pciePins = new THREE.Mesh(new THREE.BoxGeometry(slotLen - 0.5, 0.12, 0.22), this.materials.goldPin);
+        pciePins.position.y = 0.64;
+
+        const latchWing = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.65, 0.78), this.materials.darkPlastic);
+        latchWing.position.set(slotLen / 2 + 0.47, 0.47, 0);
+        const latchAccent = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.14, 0.82), this.materials.accentCyan);
+        latchAccent.position.set(slotLen / 2 + 0.57, 0.77, 0);
+
+        x16Group.add(innerPlastic, steelArmor, pciePins, latchWing, latchAccent);
+        pcieGroup.add(x16Group);
+
+        const extraSlots = [
+          { len: 2.6, posX: -6.8, posZ: 4.6 },
+          { len: 13.8, posX: -1.2, posZ: 7.4 },
+          { len: 2.6, posX: -6.8, posZ: 10.2 }
+        ];
+        extraSlots.forEach((sl) => {
+          const sMesh = new THREE.Mesh(new THREE.BoxGeometry(sl.len, 0.62, 0.72), this.materials.darkPlastic);
+          sMesh.position.set(sl.posX, 0.31, sl.posZ);
+          const sPins = new THREE.Mesh(new THREE.BoxGeometry(sl.len - 0.35, 0.1, 0.2), this.materials.goldPin);
+          sPins.position.set(sl.posX, 0.58, sl.posZ);
+          pcieGroup.add(sMesh, sPins);
+        });
+
+        this.group.add(pcieGroup);
+      }
+
+      _buildPowerAndChipsetDetails() {
+        const details = new THREE.Group();
+
+        const atx24 = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1.35, 5.2), this.materials.darkPlastic);
+        atx24.position.set(10.8, 0.675, -5.2);
+        atx24.castShadow = true;
+        details.add(atx24);
+
+        for (let r = 0; r < 12; r++) {
+          for (let c = 0; c < 2; c++) {
+            const p = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.4, 0.12), this.materials.goldPin);
+            p.position.set(10.62 + c * 0.36, 1.18, -7.4 + r * 0.4);
+            details.add(p);
+          }
+        }
+
+        [-7.2, -5.1].forEach((cx) => {
+          const cpuPwr = new THREE.Mesh(new THREE.BoxGeometry(1.85, 1.35, 1.15), this.materials.darkPlastic);
+          cpuPwr.position.set(cx, 0.675, -14.1);
+          cpuPwr.castShadow = true;
+          details.add(cpuPwr);
+        });
+
+        const pchBase = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.72, 6.2), this.materials.heatsinkDark);
+        pchBase.position.set(5.6, 0.36, 6.6);
+        pchBase.castShadow = true;
+        const pchTop = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.16, 5.4), this.materials.heatsinkSilver);
+        pchTop.position.set(5.6, 0.78, 6.6);
+        const pchAccent = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.06, 0.22), this.materials.accentCyan);
+        pchAccent.position.set(5.6, 0.88, 8.2);
+        details.add(pchBase, pchTop, pchAccent);
+
+        const cmosHolder = new THREE.Mesh(new THREE.CylinderGeometry(1.18, 1.18, 0.35, 24), this.materials.darkPlastic);
+        cmosHolder.position.set(1.3, 0.175, 4.6);
+        const cmosBattery = new THREE.Mesh(new THREE.CylinderGeometry(0.98, 0.98, 0.16, 24), this.materials.chromeSteel);
+        cmosBattery.position.set(1.3, 0.36, 4.6);
+        details.add(cmosHolder, cmosBattery);
+
+        [10.2, 12.1].forEach((sz) => {
+          const sataBlock = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.15, 1.65), this.materials.darkPlastic);
+          sataBlock.position.set(11.3, 0.575, sz);
+          details.add(sataBlock);
+        });
+
+        [-3.5, 0.5, 4.2, 7.8].forEach((hx, i) => {
+          const hdr = new THREE.Mesh(new THREE.BoxGeometry(i === 3 ? 2.4 : 1.6, 0.65, 0.75), this.materials.darkPlastic);
+          hdr.position.set(hx, 0.325, 14.35);
+          details.add(hdr);
+        });
+
+        this.group.add(details);
+      }
+
+      update(dt) {
+        const speed = Math.min(1, dt * 10);
+
+        // 1. Tuas Pengunci (Retention Lever): engsel di bawah (+Z), gagang di atas (-Z).
+        // Rotasi X POSITIF (+2.15 rad) mengangkat gagang tuas naik ke atas (+Y) dan berayun terbuka ke depan (+Z).
+        if (this.pivots.cpuLever) {
+          const targetLeverRot = this.state.cpuLeverOpen ? 2.15 : 0;
+          this.pivots.cpuLever.rotation.x += (targetLeverRot - this.pivots.cpuLever.rotation.x) * speed;
+        }
+
+        // 2. Pelat Penahan (Load Plate): engsel di atas (-Z), pelat memanjang ke bawah (+Z).
+        // Rotasi X NEGATIF (-1.42 rad) mengangkat pelat penahan naik ke atas (+Y) hingga terbuka tegak.
+        if (this.pivots.cpuLoadPlate) {
+          const targetPlateRot = this.state.cpuLoadPlateOpen ? -1.42 : 0;
+          this.pivots.cpuLoadPlate.rotation.x += (targetPlateRot - this.pivots.cpuLoadPlate.rotation.x) * speed;
+        }
+
+        // 3. Tutup Pelindung Pin (PnP Cap): terangkat ke atas saat dilepas
+        if (this.pivots.cpuCover) {
+          const targetCoverY = this.state.cpuCoverRemoved ? 2.6 : 0.14;
+          const targetCoverZ = this.state.cpuCoverRemoved ? 4.6 : 2.42;
+          const targetCoverRot = this.state.cpuCoverRemoved ? 0.35 : 0;
+          this.pivots.cpuCover.position.y += (targetCoverY - this.pivots.cpuCover.position.y) * speed;
+          this.pivots.cpuCover.position.z += (targetCoverZ - this.pivots.cpuCover.position.z) * speed;
+          this.pivots.cpuCover.rotation.x += (targetCoverRot - this.pivots.cpuCover.rotation.x) * speed;
+          this.pivots.cpuCover.visible = this.pivots.cpuCover.position.y < 2.4;
+        }
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 3. MODEL 3D MEJA KERJA TEKNISI & MATRAS ANTI-STATIS (ESD WORKBENCH)
+     * ============================================================================
+     */
+    class WorkbenchTable3D {
+      constructor(motherboardPos, trayPos) {
+        this.group = new THREE.Group();
+        this.group.name = 'Technician_Workbench_Table';
+
+        const woodMat = new THREE.MeshStandardMaterial({
+          color: '#2b2118',
+          roughness: 0.65,
+          metalness: 0.08
+        });
+        const trimMat = new THREE.MeshStandardMaterial({
+          color: '#18181b',
+          roughness: 0.5,
+          metalness: 0.4
+        });
+        const steelLegMat = new THREE.MeshStandardMaterial({
+          color: '#1e293b',
+          roughness: 0.35,
+          metalness: 0.8
+        });
+        const esdTex = ProceduralTextures.createESDMatTexture();
+        const esdMat = new THREE.MeshStandardMaterial({
+          map: esdTex,
+          roughness: 0.78,
+          metalness: 0.05
+        });
+
+        // Daun Meja Utama (Permukaan atas di Y = -0.35)
+        const tableTop = new THREE.Mesh(
+          new THREE.BoxGeometry(48, 1.5, 38),
+          woodMat
+        );
+        tableTop.position.set(1.5, -1.10, 0);
+        tableTop.receiveShadow = true;
+        this.group.add(tableTop);
+
+        // Lis pinggir meja
+        const edgeRim = new THREE.Mesh(
+          new THREE.BoxGeometry(48.3, 1.55, 38.3),
+          trimMat
+        );
+        edgeRim.position.set(1.5, -1.12, 0);
+        this.group.add(edgeRim);
+
+        // Matras Anti-Statis (ESD Mat) di atas meja (Y = -0.35 s/d -0.31)
+        const esdPad = new THREE.Mesh(
+          new THREE.BoxGeometry(42, 0.04, 33),
+          esdMat
+        );
+        esdPad.position.set(1.5, -0.33, 0);
+        esdPad.receiveShadow = true;
+        this.group.add(esdPad);
+
+        // 4 Kaki Baja Meja Kerja
+        const legGeo = new THREE.BoxGeometry(1.6, 22, 1.6);
+        [
+          [-20.5, -12.5, -16.5],
+          [23.5, -12.5, -16.5],
+          [-20.5, -12.5, 16.5],
+          [23.5, -12.5, 16.5]
+        ].forEach(([lx, ly, lz]) => {
+          const leg = new THREE.Mesh(legGeo, steelLegMat);
+          leg.position.set(lx, ly, lz);
+          this.group.add(leg);
+        });
+
+        // 9 Standoff Kuningan di bawah lubang baut Motherboard ATX
+        const standoffMat = new THREE.MeshStandardMaterial({
+          color: '#d4af37',
+          roughness: 0.25,
+          metalness: 0.9
+        });
+        const holeOffsetsX = [-11.0, 0, 10.8];
+        const holeOffsetsZ = [-14.0, 0, 14.0];
+        holeOffsetsX.forEach((ox) => {
+          holeOffsetsZ.forEach((oz) => {
+            const standoff = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.28, 0.32, 0.08, 12),
+              standoffMat
+            );
+            standoff.position.set(motherboardPos.x + ox, -0.28, motherboardPos.z + oz);
+            this.group.add(standoff);
+          });
+        });
+
+        // Tray Penyimpanan CPU (ESD CPU Tray) di sisi kanan motherboard
+        const trayGroup = new THREE.Group();
+        trayGroup.position.set(trayPos.x, -0.31, trayPos.z);
+
+        const trayOuter = new THREE.Mesh(
+          new THREE.BoxGeometry(6.8, 0.22, 7.4),
+          new THREE.MeshStandardMaterial({ color: '#0f172a', roughness: 0.5, metalness: 0.2 })
+        );
+        trayOuter.position.y = 0.11;
+        trayOuter.receiveShadow = true;
+        trayOuter.castShadow = true;
+
+        const trayInnerBed = new THREE.Mesh(
+          new THREE.BoxGeometry(4.4, 0.06, 4.8),
+          new THREE.MeshStandardMaterial({ color: '#1e293b', roughness: 0.7 })
+        );
+        trayInnerBed.position.y = 0.23;
+
+        const trayBorder = new THREE.LineSegments(
+          new THREE.EdgesGeometry(new THREE.BoxGeometry(6.85, 0.24, 7.45)),
+          new THREE.LineBasicMaterial({ color: '#38bdf8' })
+        );
+        trayBorder.position.y = 0.12;
+
+        trayGroup.add(trayOuter, trayInnerBed, trayBorder);
+        this.group.add(trayGroup);
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 4. MODEL 3D PROCESSOR INTEL CORE LGA (DIMENSI PRESISI SESUAI SOKET)
+     * ============================================================================
+     */
+    class CPUProcessor3D {
+      constructor() {
+        this.group = new THREE.Group();
+        this.group.name = 'Intel_LGA_Processor';
+
+        // Ukuran presisi agar pas masuk ke rongga soket 3.75 x 4.15 cm
+        this.width = 3.68;
+        this.length = 4.08;
+
+        this.draggableMeshes = [];
+
+        const substrateMat = new THREE.MeshStandardMaterial({
+          color: '#15803d', // PCB Hijau khas Intel
+          roughness: 0.42,
+          metalness: 0.18
+        });
+
+        const ihsTex = ProceduralTextures.createCPUIHSTexture();
+        const ihsTopMat = new THREE.MeshStandardMaterial({
+          map: ihsTex,
+          roughness: 0.24,
+          metalness: 0.88
+        });
+        const ihsSideMat = new THREE.MeshStandardMaterial({
+          color: '#cbd5e1',
+          roughness: 0.22,
+          metalness: 0.92
+        });
+
+        const goldMat = new THREE.MeshStandardMaterial({
+          color: '#facc15',
+          emissive: '#ca8a04',
+          emissiveIntensity: 0.25,
+          roughness: 0.2,
+          metalness: 0.95
+        });
+
+        // 1. Substrat PCB Hijau Processor
+        const pcbSubstrate = new THREE.Mesh(
+          new THREE.BoxGeometry(this.width, 0.11, this.length),
+          substrateMat
+        );
+        pcbSubstrate.position.y = 0.055;
+        pcbSubstrate.castShadow = true;
+        pcbSubstrate.receiveShadow = true;
+        this.group.add(pcbSubstrate);
+        this.draggableMeshes.push(pcbSubstrate);
+
+        // 2. Matriks Kontak Emas LGA di bagian bawah processor
+        const bottomPinsTex = ProceduralTextures.createLGAPinsTexture();
+        const bottomContact = new THREE.Mesh(
+          new THREE.PlaneGeometry(this.width - 0.25, this.length - 0.25),
+          new THREE.MeshStandardMaterial({ map: bottomPinsTex, roughness: 0.25, metalness: 0.9 })
+        );
+        bottomContact.rotation.x = Math.PI / 2;
+        bottomContact.position.y = -0.002;
+        this.group.add(bottomContact);
+
+        // 3. Integrated Heat Spreader (IHS) Nikel-Tembaga khas Intel LGA 1700/1851
+        const ihsMaterials = [
+          ihsSideMat,
+          ihsSideMat,
+          ihsTopMat,
+          ihsSideMat,
+          ihsSideMat,
+          ihsSideMat
+        ];
+        const ihsMain = new THREE.Mesh(
+          new THREE.BoxGeometry(3.15, 0.15, 3.68),
+          ihsMaterials
+        );
+        ihsMain.position.y = 0.185;
+        ihsMain.castShadow = true;
+        this.group.add(ihsMain);
+        this.draggableMeshes.push(ihsMain);
+
+        // Sayap / Telinga IHS samping khas Intel LGA 1700/1851
+        const ihsEars = new THREE.Mesh(
+          new THREE.BoxGeometry(3.48, 0.11, 1.35),
+          ihsSideMat
+        );
+        ihsEars.position.y = 0.165;
+        ihsEars.castShadow = true;
+        this.group.add(ihsEars);
+        this.draggableMeshes.push(ihsEars);
+
+        // 4. Tanda Segitiga Emas Pin 1 di pojok kiri bawah substrat CPU
+        // Saat rotasi Y = 0°, posisi ini (-1.68, 0.115, +1.88) sejajar 100% dengan segitiga soket!
+        const triShape = new THREE.Shape();
+        triShape.moveTo(0, 0);
+        triShape.lineTo(0.46, 0);
+        triShape.lineTo(0, 0.46);
+        triShape.closePath();
+        const goldTriangle = new THREE.Mesh(new THREE.ShapeGeometry(triShape), goldMat);
+        goldTriangle.rotation.x = -Math.PI / 2;
+        goldTriangle.position.set(-1.72, 0.114, 1.92);
+        this.group.add(goldTriangle);
+        this.draggableMeshes.push(goldTriangle);
+
+        // 5. Penanda Garis Kuning Highlight Interaktif CPU
+        const cpuEdgesGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(4.28, 0.38, 4.28));
+        const cpuHighlightMat = new THREE.LineBasicMaterial({
+          color: 0xfbbf24,
+          linewidth: 3,
+          transparent: true,
+          opacity: 0.95
+        });
+        const cpuHighlightBox = new THREE.LineSegments(cpuEdgesGeo, cpuHighlightMat);
+        cpuHighlightBox.position.y = 0.16;
+        cpuHighlightBox.visible = true;
+        this.group.add(cpuHighlightBox);
+        this.highlightBox = cpuHighlightBox;
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 5. LOGIKA UTAMA SIMULASI INTERAKTIF
+     * ============================================================================
+     */
+    function initSimulation() {
+      const container = document.getElementById('canvas-container');
+      if (!container) return;
+
+      const getViewportSize = () => ({
+        w: Math.max(1, container.clientWidth || window.innerWidth),
+        h: Math.max(1, container.clientHeight || Math.round(window.innerHeight * 0.55))
+      });
+
+      const initialSize = getViewportSize();
+
+      // Scene & Kamera
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color('#090d16');
+
+      const camera = new THREE.PerspectiveCamera(
+        42,
+        initialSize.w / initialSize.h,
+        0.1,
+        220
+      );
+
+      const renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        preserveDrawingBuffer: true,
+        powerPreference: 'high-performance'
+      });
+      renderer.setSize(initialSize.w, initialSize.h);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      container.appendChild(renderer.domElement);
+
+      // Pencahayaan Studio Bengkel Teknisi
+      const hemiLight = new THREE.HemisphereLight('#f1f5f9', '#1e293b', 0.92);
+      hemiLight.position.set(0, 35, 0);
+      scene.add(hemiLight);
+
+      const dirLight = new THREE.DirectionalLight('#ffffff', 1.15);
+      dirLight.position.set(18, 32, 20);
+      dirLight.castShadow = true;
+      dirLight.shadow.mapSize.width = 2048;
+      dirLight.shadow.mapSize.height = 2048;
+      dirLight.shadow.camera.near = 2;
+      dirLight.shadow.camera.far = 85;
+      const shadowBound = 26;
+      dirLight.shadow.camera.left = -shadowBound;
+      dirLight.shadow.camera.right = shadowBound;
+      dirLight.shadow.camera.top = shadowBound;
+      dirLight.shadow.camera.bottom = -shadowBound;
+      dirLight.shadow.bias = -0.0005;
+      scene.add(dirLight);
+
+      const rimLight = new THREE.DirectionalLight('#38bdf8', 0.4);
+      rimLight.position.set(-24, 18, -22);
+      scene.add(rimLight);
+
+      // Posisi Motherboard & CPU Tray di atas Meja Kerja
+      const mbWorldPos = new THREE.Vector3(-3.2, 0, 0);
+      const trayWorldPos = new THREE.Vector3(14.5, -0.05, -6.2);
+
+      // Instansiasi Meja Kerja, Motherboard Master & CPU Processor
+      const workbench = new WorkbenchTable3D(mbWorldPos, trayWorldPos);
+      scene.add(workbench.group);
+
+      const motherboard = new MotherboardMaster3D();
+      motherboard.group.position.copy(mbWorldPos);
+      scene.add(motherboard.group);
+
+      // Koordinat World Soket CPU
+      const socketWorldPos = new THREE.Vector3(
+        mbWorldPos.x + motherboard.anchors.cpu.x,
+        mbWorldPos.y + motherboard.anchors.cpu.y,
+        mbWorldPos.z + motherboard.anchors.cpu.z
+      );
+
+      const cpu = new CPUProcessor3D();
+      scene.add(cpu.group);
+
+      // Bayangan proyeksi lembut saat CPU di-drag di atas meja/motherboard
+      const dragShadowMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(4.1, 4.5),
+        new THREE.MeshBasicMaterial({
+          color: '#38bdf8',
+          transparent: true,
+          opacity: 0.0,
+          depthWrite: false
+        })
+      );
+      dragShadowMesh.rotation.x = -Math.PI / 2;
+      dragShadowMesh.position.y = 0.45;
+      scene.add(dragShadowMesh);
+
+      // ======================================================================
+      // KONTROL KAMERA PRESET & PARALAKS KURSOR (X, Y SAJA, Z TETAP)
+      // ======================================================================
+      const camState = {
+        target: new THREE.Vector3(2.5, 0, -2.5),
+        desiredTarget: new THREE.Vector3(2.5, 0, -2.5),
+        radius: 38,
+        desiredRadius: 38,
+        theta: 0.22,
+        desiredTheta: 0.22,
+        phi: 0.72,
+        desiredPhi: 0.72,
+        // Offset paralaks POV mengikuti posisi kursor layar (hanya sumbu X & Y, Z tetap)
+        cursorNormX: 0,
+        cursorNormY: 0,
+        cursorOffsetX: 0,
+        cursorOffsetY: 0
+      };
+
+      const cameraPresets = {
+        workbench: { target: [2.5, 0, -2.5], radius: 38, theta: 0.22, phi: 0.72 },
+        socket:    { target: [socketWorldPos.x, 0.4, socketWorldPos.z], radius: 14.5, theta: 0.28, phi: 0.68 },
+        cpuTray:   { target: [trayWorldPos.x, 0.2, trayWorldPos.z], radius: 14.0, theta: -0.25, phi: 0.68 },
+        topDown:   { target: [2.2, 0, -3.5], radius: 34, theta: 0.0, phi: 0.14 }
+      };
+
+      function applyCameraPreset(name) {
+        const p = cameraPresets[name];
+        if (!p) return;
+        camState.desiredTarget.set(p.target[0], p.target[1], p.target[2]);
+        camState.desiredRadius = p.radius;
+        camState.desiredTheta = p.theta;
+        camState.desiredPhi = p.phi;
+
+        document.querySelectorAll('.cam-btn').forEach((btn) => {
+          if (btn.dataset.cam === name) {
+            btn.className = 'cam-btn bg-sky-600 text-white border border-sky-400/60 px-2.5 py-1.5 rounded-xl text-xs font-medium shadow-md transition hover:bg-sky-500 active:scale-95';
+          } else {
+            btn.className = 'cam-btn bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 px-2.5 py-1.5 rounded-xl text-xs font-medium backdrop-blur-md shadow-md transition active:scale-95';
+          }
+        });
+      }
+
+      document.querySelectorAll('.cam-btn').forEach((btn) => {
+        btn.addEventListener('click', () => applyCameraPreset(btn.dataset.cam));
+      });
+
+      // ======================================================================
+      // STATE PERAKITAN CPU & ORIENTASI
+      // ======================================================================
+      const simState = {
+        rotationStep: 1, // 0 = 0° (Sejajar), 1 = 90°, 2 = 180°, 3 = 270°
+        targetRotationY: -Math.PI / 2,
+        cpuInstalled: false,
+        isDraggingCPU: false,
+        cpuTargetPos: new THREE.Vector3(trayWorldPos.x, 0.18, trayWorldPos.z),
+        completed: false,
+        countdownTimer: null
+      };
+
+      function resetCPUTransformToTray() {
+        simState.cpuTargetPos.set(trayWorldPos.x, 0.18, trayWorldPos.z);
+        cpu.group.position.copy(simState.cpuTargetPos);
+      }
+      resetCPUTransformToTray();
+
+      // ======================================================================
+      // TOAST FEEDBACK & SINKRONISASI UI LANGKAH
+      // ======================================================================
+      let toastTimeout = null;
+      function showFeedback(title, msg, type = 'info') {
+        const toast = document.getElementById('feedback-toast');
+        const dot = document.getElementById('toast-dot');
+        const tTitle = document.getElementById('toast-title');
+        const tMsg = document.getElementById('toast-msg');
+
+        tTitle.textContent = title;
+        tMsg.textContent = msg;
+
+        if (type === 'warn') {
+          toast.className = 'pointer-events-none absolute top-24 sm:top-4 right-3 sm:right-4 max-w-xs sm:max-w-sm bg-slate-900/95 border border-amber-500/60 text-slate-100 px-3.5 py-2.5 rounded-xl shadow-2xl backdrop-blur-md transition-all duration-300 opacity-100 translate-y-0 z-20';
+          dot.className = 'mt-1 w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0';
+          tTitle.className = 'text-xs font-semibold text-amber-300';
+        } else if (type === 'success') {
+          toast.className = 'pointer-events-none absolute top-24 sm:top-4 right-3 sm:right-4 max-w-xs sm:max-w-sm bg-slate-900/95 border border-emerald-500/60 text-slate-100 px-3.5 py-2.5 rounded-xl shadow-2xl backdrop-blur-md transition-all duration-300 opacity-100 translate-y-0 z-20';
+          dot.className = 'mt-1 w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0';
+          tTitle.className = 'text-xs font-semibold text-emerald-300';
+        } else {
+          toast.className = 'pointer-events-none absolute top-24 sm:top-4 right-3 sm:right-4 max-w-xs sm:max-w-sm bg-slate-900/95 border border-sky-500/50 text-slate-100 px-3.5 py-2.5 rounded-xl shadow-2xl backdrop-blur-md transition-all duration-300 opacity-100 translate-y-0 z-20';
+          dot.className = 'mt-1 w-2.5 h-2.5 rounded-full bg-sky-400 shrink-0';
+          tTitle.className = 'text-xs font-semibold text-sky-300';
+        }
+
+        clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => {
+          toast.classList.remove('opacity-100', 'translate-y-0');
+          toast.classList.add('opacity-0', '-translate-y-2');
+        }, 3200);
+      }
+
+      function getCurrentStepIndex() {
+        const st = motherboard.state;
+        if (!st.cpuLeverOpen) return 1;
+        if (!st.cpuLoadPlateOpen) return 2;
+        if (!st.cpuCoverRemoved) return 3;
+        if (!simState.cpuInstalled) return 4;
+        if (st.cpuLoadPlateOpen) return 5;
+        if (st.cpuLeverOpen) return 6;
+        return 7; // Selesai semua langkah
+      }
+
+      function updateSimulationUI() {
+        const step = getCurrentStepIndex();
+        const completedCount = Math.min(6, step - 1);
+        document.getElementById('step-progress-text').textContent = `${completedCount} / 6`;
+
+        // Update indikator orientasi CPU (tanpa koordinat)
+        const angleDeg = (simState.rotationStep % 4) * 90;
+        const isAligned = angleDeg === 0;
+        const angleBadge = document.getElementById('cpu-angle-badge');
+        angleBadge.textContent = isAligned ? '0° (Sejajar Pin 1)' : `${angleDeg}° (Belum Sejajar)`;
+        angleBadge.className = isAligned
+          ? 'text-[11px] px-2.5 py-0.5 rounded-full font-bold bg-emerald-400 text-slate-950 border border-emerald-300 shadow-sm'
+          : 'text-[11px] px-2.5 py-0.5 rounded-full font-bold bg-amber-400 text-slate-950 border border-amber-300 shadow-sm';
+
+        // Update posisi visual segitiga emas mini pada panel orientasi
+        const dotEl = document.getElementById('orientation-indicator-dot');
+        if (dotEl) {
+          if (angleDeg === 0) {
+            dotEl.style.cssText = 'bottom: 3px; left: 3px; clip-path: polygon(0 0, 0 100%, 100% 100%);';
+          } else if (angleDeg === 90) {
+            dotEl.style.cssText = 'top: 3px; left: 3px; clip-path: polygon(0 0, 100% 0, 0 100%);';
+          } else if (angleDeg === 180) {
+            dotEl.style.cssText = 'top: 3px; right: 3px; clip-path: polygon(0 0, 100% 0, 100% 100%);';
+          } else {
+            dotEl.style.cssText = 'bottom: 3px; right: 3px; clip-path: polygon(100% 0, 0 100%, 100% 100%);';
+          }
+        }
+
+        // Nonaktifkan tombol putar jika CPU sudah terpasang di dalam soket
+        document.getElementById('btn-rotate-ccw').disabled = simState.cpuInstalled;
+        document.getElementById('btn-rotate-cw').disabled = simState.cpuInstalled;
+
+        // Update daftar langkah 1 - 6
+        const stepHints = {
+          1: 'Langkah 1: Klik Soket CPU pada motherboard untuk membuka tuas pengunci.',
+          2: 'Langkah 2: Klik kembali Soket CPU untuk mengangkat pelat penahan (Load Plate).',
+          3: 'Langkah 3: Klik Soket CPU untuk melepas tutup pelindung pin (PnP Cap).',
+          4: 'Langkah 4: Putar CPU ke 0° (sejajar segitiga emas), lalu drag ke soket.',
+          5: 'Langkah 5: Klik Soket CPU untuk menutup pelat penahan di atas processor.',
+          6: 'Langkah 6: Klik Soket CPU untuk mengunci tuas pengunci (Retention Lever).',
+          7: 'Selesai! Processor Intel LGA terpasang dan terkunci sempurna.'
+        };
+        document.getElementById('live-instruction-text').textContent = stepHints[step] || stepHints[7];
+
+        for (let i = 1; i <= 6; i++) {
+          const item = document.getElementById(`step-item-${i}`);
+          const badge = item.querySelector('.step-badge');
+          if (i < step) {
+            item.className = 'flex items-start gap-2.5 p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200';
+            badge.className = 'step-badge w-5 h-5 rounded-full bg-emerald-500 text-slate-950 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5';
+            badge.textContent = '✓';
+          } else if (i === step) {
+            item.className = 'flex items-start gap-2.5 p-2 rounded-xl bg-sky-500/15 border border-sky-500/50 text-slate-100';
+            badge.className = 'step-badge w-5 h-5 rounded-full bg-sky-400 text-slate-950 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5';
+            badge.textContent = String(i);
+          } else {
+            item.className = 'flex items-start gap-2.5 p-2 rounded-xl bg-slate-950/70 border border-slate-800 text-slate-400';
+            badge.className = 'step-badge w-5 h-5 rounded-full bg-slate-800 text-slate-400 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5';
+            badge.textContent = String(i);
+          }
+        }
+
+        // Update penanda garis kuning komponen interaktif (Soket & CPU)
+        if (cpu.highlightBox) {
+          cpu.highlightBox.visible = !simState.cpuInstalled;
+        }
+        if (motherboard.pivots.socketInteractiveBox) {
+          motherboard.pivots.socketInteractiveBox.visible = (step !== 4 && step <= 6);
+        }
+      }
+
+      // ======================================================================
+      // KONTROL TUTUP / BUKA PANEL PROSEDUR PERAKITAN
+      // ======================================================================
+      const toggleProcBtn = document.getElementById('btn-toggle-procedure');
+      const procContent = document.getElementById('procedure-content');
+      const procChevron = document.getElementById('procedure-chevron');
+      if (toggleProcBtn && procContent && procChevron) {
+        toggleProcBtn.addEventListener('click', () => {
+          const isHidden = procContent.classList.toggle('hidden');
+          toggleProcBtn.setAttribute('aria-expanded', String(!isHidden));
+          procChevron.style.transform = isHidden ? 'rotate(-90deg)' : 'rotate(0deg)';
+        });
+      }
+
+      // ======================================================================
+      // KONTROL ORIENTASI CPU (HANYA ORIENTASI, TANPA KOORDINAT)
+      // ======================================================================
+      function rotateCPU(deltaSteps) {
+        if (simState.cpuInstalled) {
+          showFeedback('CPU Sudah Terpasang', 'Processor sudah duduk di dalam soket dan tidak dapat diputar.', 'warn');
+          return;
+        }
+        simState.rotationStep = (simState.rotationStep + deltaSteps + 4) % 4;
+        // 0° -> 0 rad, 90° -> -PI/2 rad, 180° -> -PI rad, 270° -> -3*PI/2 rad
+        simState.targetRotationY = -simState.rotationStep * (Math.PI / 2);
+
+        const deg = simState.rotationStep * 90;
+        if (deg === 0) {
+          showFeedback('Orientasi Sejajar (0°)', 'Segitiga emas CPU kini sejajar dengan tanda Pin 1 di pojok kiri bawah soket!', 'success');
+        } else {
+          showFeedback(`Orientasi CPU: ${deg}°`, 'Putar hingga 0° agar segitiga emas sejajar dengan pojok kiri bawah soket.', 'info');
+        }
+        updateSimulationUI();
+      }
+
+      document.getElementById('btn-rotate-ccw').addEventListener('click', () => rotateCPU(-1));
+      document.getElementById('btn-rotate-cw').addEventListener('click', () => rotateCPU(1));
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'q' || e.key === 'Q') rotateCPU(-1);
+        if (e.key === 'e' || e.key === 'E') rotateCPU(1);
+      });
+
+      // ======================================================================
+      // MEKANIK KLIK BERTAHAP PADA SOKET CPU & ALUR PENYELESAIAN 3 DETIK
+      // ======================================================================
+      function triggerCompletionSequence() {
+        if (simState.completed) return;
+        simState.completed = true;
+
+        const banner = document.getElementById('countdown-banner');
+        const numEl = document.getElementById('countdown-number');
+        banner.classList.remove('hidden');
+
+        let remaining = 3;
+        numEl.textContent = String(remaining);
+
+        clearInterval(simState.countdownTimer);
+        simState.countdownTimer = setInterval(() => {
+          remaining -= 1;
+          if (remaining > 0) {
+            numEl.textContent = String(remaining);
+          } else {
+            clearInterval(simState.countdownTimer);
+            banner.classList.add('hidden');
+            document.getElementById('choice-modal').classList.remove('hidden');
+          }
+        }, 1000);
+      }
+
+      function handleSocketClickStep() {
+        const st = motherboard.state;
+
+        // Tahap pembukaan bertahap sebelum CPU dipasang
+        if (!simState.cpuInstalled) {
+          if (!st.cpuLeverOpen) {
+            st.cpuLeverOpen = true;
+            showFeedback('Langkah 1 Selesai', 'Tuas pengunci soket dibuka. Klik soket lagi untuk mengangkat pelat penahan.', 'success');
+          } else if (!st.cpuLoadPlateOpen) {
+            st.cpuLoadPlateOpen = true;
+            showFeedback('Langkah 2 Selesai', 'Pelat penahan diangkat. Klik soket lagi untuk melepas tutup pelindung pin.', 'success');
+          } else if (!st.cpuCoverRemoved) {
+            st.cpuCoverRemoved = true;
+            showFeedback('Langkah 3 Selesai', 'Tutup pelindung pin dilepas! Sekarang sejajarkan CPU (0°) lalu drag ke soket.', 'success');
+          } else {
+            showFeedback('Soket Siap Dipasang', 'Seret (click & drag) processor dari tray ke dalam soket CPU.', 'info');
+          }
+          updateSimulationUI();
+          return;
+        }
+
+        // Tahap penutupan & penguncian bertahap setelah CPU dipasang
+        if (st.cpuLoadPlateOpen) {
+          st.cpuLoadPlateOpen = false;
+          showFeedback('Langkah 5 Selesai', 'Pelat penahan ditutup di atas CPU. Klik soket sekali lagi untuk mengunci tuas.', 'success');
+          updateSimulationUI();
+        } else if (st.cpuLeverOpen) {
+          st.cpuLeverOpen = false;
+          showFeedback('Pemasangan Sempurna!', 'Tuas pengunci terkunci penuh mengamankan processor Intel LGA.', 'success');
+          updateSimulationUI();
+          triggerCompletionSequence();
+        } else {
+          showFeedback('CPU Terkunci', 'Processor sudah terpasang dan terkunci sempurna pada soket LGA.', 'info');
+        }
+      }
+
+      // ======================================================================
+      // INTERAKSI MOUSE / SENTUH: DRAG CPU & KLIK SOKET (TANPA ORBIT MOUSE)
+      // ======================================================================
+      const raycaster = new THREE.Raycaster();
+      const pointerNDC = new THREE.Vector2();
+      const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -1.35);
+      const planeIntersectPt = new THREE.Vector3();
+
+      let isPointerDown = false;
+      let pointerButton = 0;
+      let lastX = 0;
+      let lastY = 0;
+      let movedDistance = 0;
+
+      function updateNDC(clientX, clientY) {
+        const rect = renderer.domElement.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          pointerNDC.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+          pointerNDC.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+        }
+      }
+
+      // Pelacakan lokasi kursor pada layar untuk menggeser POV (koordinat X & Y saja, Z tetap)
+      window.addEventListener('mousemove', (e) => {
+        const winW = Math.max(1, window.innerWidth);
+        const winH = Math.max(1, window.innerHeight);
+        // -1 (kiri/bawah) hingga +1 (kanan/atas)
+        camState.cursorNormX = Math.max(-1, Math.min(1, (e.clientX / winW) * 2 - 1));
+        camState.cursorNormY = Math.max(-1, Math.min(1, -((e.clientY / winH) * 2 - 1)));
+      });
+
+      container.addEventListener('mouseleave', () => {
+        camState.cursorNormX = 0;
+        camState.cursorNormY = 0;
+      });
+
+      function onPointerStart(clientX, clientY, button = 0) {
+        isPointerDown = true;
+        pointerButton = button;
+        lastX = clientX;
+        lastY = clientY;
+        movedDistance = 0;
+
+        updateNDC(clientX, clientY);
+        raycaster.setFromCamera(pointerNDC, camera);
+
+        // Cek apakah pengguna menekan CPU untuk di-drag
+        if (button === 0 && !simState.cpuInstalled) {
+          const cpuHits = raycaster.intersectObjects(cpu.draggableMeshes, false);
+          if (cpuHits.length > 0) {
+            simState.isDraggingCPU = true;
+            simState.cpuTargetPos.y = 1.35;
+            container.style.cursor = 'grabbing';
+            return;
+          }
+        }
+      }
+
+      function onPointerMove(clientX, clientY) {
+        if (!isPointerDown) return;
+
+        const dx = clientX - lastX;
+        const dy = clientY - lastY;
+        movedDistance += Math.hypot(dx, dy);
+        lastX = clientX;
+        lastY = clientY;
+
+        if (simState.isDraggingCPU) {
+          updateNDC(clientX, clientY);
+          raycaster.setFromCamera(pointerNDC, camera);
+          if (raycaster.ray.intersectPlane(dragPlane, planeIntersectPt)) {
+            const clampedX = Math.max(-18, Math.min(20, planeIntersectPt.x));
+            const clampedZ = Math.max(-16, Math.min(16, planeIntersectPt.z));
+            simState.cpuTargetPos.set(clampedX, 1.35, clampedZ);
+
+            // Nyalakan bingkai panduan soket saat CPU didekatkan
+            const distToSocket = Math.hypot(clampedX - socketWorldPos.x, clampedZ - socketWorldPos.z);
+            if (motherboard.pivots.socketHighlightRing) {
+              const isReady = motherboard.state.cpuCoverRemoved && (simState.rotationStep % 4 === 0);
+              motherboard.pivots.socketHighlightRing.material.color.set(isReady ? '#10b981' : '#f59e0b');
+              motherboard.pivots.socketHighlightRing.material.opacity = distToSocket < 5.5 ? 0.95 : 0.25;
+            }
+          }
+        }
+      }
+
+      function onPointerEnd(clientX, clientY) {
+        if (simState.isDraggingCPU) {
+          simState.isDraggingCPU = false;
+          container.style.cursor = 'default';
+          if (motherboard.pivots.socketHighlightRing) {
+            motherboard.pivots.socketHighlightRing.material.opacity = 0.0;
+          }
+
+          const distToSocket = Math.hypot(
+            simState.cpuTargetPos.x - socketWorldPos.x,
+            simState.cpuTargetPos.z - socketWorldPos.z
+          );
+
+          if (distToSocket < 3.4) {
+            const st = motherboard.state;
+            if (!st.cpuLeverOpen || !st.cpuLoadPlateOpen || !st.cpuCoverRemoved) {
+              showFeedback('Soket Belum Terbuka', 'Buka tuas, angkat pelat penahan, dan lepas tutup pelindung pin terlebih dahulu!', 'warn');
+              resetCPUTransformToTray();
+              return;
+            }
+            if ((simState.rotationStep % 4) !== 0) {
+              showFeedback('Orientasi Salah!', 'Putar CPU hingga 0° agar segitiga emas sejajar dengan pojok kiri bawah soket!', 'warn');
+              resetCPUTransformToTray();
+              return;
+            }
+
+            // Pasang CPU presisi di dalam soket LGA
+            simState.cpuInstalled = true;
+            simState.cpuTargetPos.set(socketWorldPos.x, 0.23, socketWorldPos.z);
+            showFeedback('Langkah 4 Selesai', 'CPU duduk presisi di soket! Sekarang klik soket CPU untuk menutup pelat penahan.', 'success');
+            updateSimulationUI();
+          } else {
+            // Kembalikan ke tray jika dilepas di luar area soket
+            resetCPUTransformToTray();
+          }
+          isPointerDown = false;
+          return;
+        }
+
+        // Deteksi klik pada soket CPU
+        if (isPointerDown && movedDistance < 6 && pointerButton === 0) {
+          updateNDC(clientX, clientY);
+          raycaster.setFromCamera(pointerNDC, camera);
+          const socketHits = raycaster.intersectObjects(motherboard.cpuSocketClickMeshes, false);
+          if (socketHits.length > 0) {
+            handleSocketClickStep();
+          }
+        }
+
+        isPointerDown = false;
+      }
+
+      container.addEventListener('contextmenu', (e) => e.preventDefault());
+      container.addEventListener('mousedown', (e) => onPointerStart(e.clientX, e.clientY, e.button));
+      window.addEventListener('mousemove', (e) => onPointerMove(e.clientX, e.clientY));
+      window.addEventListener('mouseup', (e) => onPointerEnd(e.clientX, e.clientY));
+
+      // Dukungan Touch Screen
+      container.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          onPointerStart(e.touches[0].clientX, e.touches[0].clientY, 0);
+        }
+      }, { passive: true });
+
+      container.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1) {
+          onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
+        }
+      }, { passive: true });
+
+      container.addEventListener('touchend', (e) => {
+        if (e.changedTouches.length > 0) {
+          onPointerEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+        }
+      });
+
+      // ======================================================================
+      // RESET SIMULASI & TOMBOL MODAL AKHIR (3 DETIK SETELAH SELESAI)
+      // ======================================================================
+      function resetFullSimulation() {
+        clearInterval(simState.countdownTimer);
+        motherboard.state.cpuLoadPlateOpen = false;
+        motherboard.state.cpuLeverOpen = false;
+        motherboard.state.cpuCoverRemoved = false;
+
+        simState.rotationStep = 1;
+        simState.targetRotationY = -Math.PI / 2;
+        simState.cpuInstalled = false;
+        simState.isDraggingCPU = false;
+        simState.completed = false;
+        resetCPUTransformToTray();
+
+        document.getElementById('countdown-banner').classList.add('hidden');
+        document.getElementById('choice-modal').classList.add('hidden');
+        document.getElementById('summary-modal').classList.add('hidden');
+        document.getElementById('inspect-mode-bar').classList.add('hidden');
+
+        applyCameraPreset('workbench');
+        updateSimulationUI();
+        showFeedback('Simulasi Direset', 'Meja kerja dan komponen dikembalikan ke kondisi awal.', 'info');
+      }
+
+      document.getElementById('btn-reset-sim').addEventListener('click', resetFullSimulation);
+      document.getElementById('btn-restart-sim').addEventListener('click', resetFullSimulation);
+
+      document.getElementById('btn-inspect-result').addEventListener('click', () => {
+        document.getElementById('choice-modal').classList.add('hidden');
+        document.getElementById('inspect-mode-bar').classList.remove('hidden');
+        applyCameraPreset('socket');
+        showFeedback('Mode Inspeksi Hasil', 'Gunakan preset kamera atau geser kursor untuk melihat hasil pemasangan CPU.', 'info');
+      });
+
+      document.getElementById('btn-finish-game').addEventListener('click', () => {
+        document.getElementById('choice-modal').classList.add('hidden');
+        document.getElementById('inspect-mode-bar').classList.add('hidden');
+        document.getElementById('summary-modal').classList.remove('hidden');
+      });
+
+      document.getElementById('btn-finish-from-inspect').addEventListener('click', () => {
+        document.getElementById('inspect-mode-bar').classList.add('hidden');
+        document.getElementById('summary-modal').classList.remove('hidden');
+      });
+
+      const btnReview = document.getElementById('btn-review-from-summary');
+      if (btnReview) {
+        btnReview.addEventListener('click', () => {
+          document.getElementById('summary-modal').classList.add('hidden');
+          document.getElementById('inspect-mode-bar').classList.remove('hidden');
+        });
+      }
+
+      // ======================================================================
+      // RESIZE OBSERVER & WINDOW RESIZE
+      // ======================================================================
+      function handleViewportResize() {
+        const size = getViewportSize();
+        camera.aspect = size.w / size.h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(size.w, size.h);
+      }
+
+      window.addEventListener('resize', handleViewportResize);
+      if (typeof ResizeObserver !== 'undefined') {
+        const ro = new ResizeObserver(() => handleViewportResize());
+        ro.observe(container);
+      }
+
+      // ======================================================================
+      // LOOP RENDER & ANIMASI 60 FPS
+      // ======================================================================
+      let lastTime = performance.now();
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        const dt = Math.min(0.05, (now - lastTime) / 1000);
+        lastTime = now;
+
+        // 1. Interpolasi Kamera & Offset POV Kursor (Hanya Ubah Koordinat X & Y, Z Tetap)
+        const camLerp = Math.min(1, dt * 8);
+        camState.target.lerp(camState.desiredTarget, camLerp);
+        camState.radius += (camState.desiredRadius - camState.radius) * camLerp;
+        camState.theta += (camState.desiredTheta - camState.theta) * camLerp;
+        camState.phi += (camState.desiredPhi - camState.phi) * camLerp;
+
+        // Amplitudo pergeseran XY menyesuaikan jarak zoom kamera agar nyaman di semua preset
+        const parallaxScale = Math.max(1.6, camState.radius * 0.14);
+        const targetCursorX = camState.cursorNormX * parallaxScale;
+        const targetCursorY = camState.cursorNormY * (parallaxScale * 0.75);
+        camState.cursorOffsetX += (targetCursorX - camState.cursorOffsetX) * camLerp;
+        camState.cursorOffsetY += (targetCursorY - camState.cursorOffsetY) * camLerp;
+
+        const sinPhi = Math.sin(camState.phi);
+        const baseCamX = camState.target.x + camState.radius * sinPhi * Math.sin(camState.theta);
+        const baseCamY = camState.target.y + camState.radius * Math.cos(camState.phi);
+        const baseCamZ = camState.target.z + camState.radius * sinPhi * Math.cos(camState.theta);
+
+        // Terapkan pergeseran kursor hanya pada koordinat X dan Y kamera (Z tetap)
+        camera.position.set(
+          baseCamX + camState.cursorOffsetX,
+          Math.max(1.5, baseCamY + camState.cursorOffsetY),
+          baseCamZ
+        );
+        camera.lookAt(
+          camState.target.x + camState.cursorOffsetX * 0.65,
+          camState.target.y + camState.cursorOffsetY * 0.65,
+          camState.target.z
+        );
+
+        // 2. Interpolasi Posisi & Orientasi CPU Processor
+        const cpuLerp = Math.min(1, dt * 14);
+        cpu.group.position.lerp(simState.cpuTargetPos, cpuLerp);
+        cpu.group.rotation.y += (simState.targetRotationY - cpu.group.rotation.y) * cpuLerp;
+
+        // Bayangan pemandu saat CPU diangkat/digeser
+        if (simState.isDraggingCPU) {
+          dragShadowMesh.position.set(cpu.group.position.x, 0.42, cpu.group.position.z);
+          dragShadowMesh.material.opacity = 0.25;
+        } else {
+          dragShadowMesh.material.opacity = 0.0;
+        }
+
+        // 3. Animasi Mekanik Soket Motherboard & Denyut Garis Kuning Interaktif
+        motherboard.update(dt);
+
+        const pulse = 0.75 + Math.sin(now * 0.006) * 0.25;
+        if (cpu.highlightBox && cpu.highlightBox.visible) {
+          cpu.highlightBox.material.opacity = pulse;
+        }
+        if (motherboard.pivots.socketInteractiveBox && motherboard.pivots.socketInteractiveBox.visible) {
+          motherboard.pivots.socketInteractiveBox.material.opacity = pulse;
+        }
+
+        renderer.render(scene, camera);
+      }
+
+      updateSimulationUI();
+      requestAnimationFrame(animate);
+    }
+
+    // Pastikan inisialisasi langsung berjalan baik sebelum maupun sesudah DOMContentLoaded
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      setTimeout(initSimulation, 0);
+    } else {
+      window.addEventListener('DOMContentLoaded', initSimulation);
+    }
+  </script>
+</body>
+</html>
+
