@@ -1,0 +1,2599 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulasi 3D: Pemasangan Kabel Daya Utama ke Motherboard</title>
+  <!-- Tailwind CSS CDN untuk tata letak responsif dan modern -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Three.js r128 untuk rendering 3D interaktif -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- Google Font Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Inter', sans-serif;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #090d16;
+      color: #f1f5f9;
+    }
+    #canvas-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: grab;
+    }
+    #canvas-container canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(71, 85, 105, 0.8);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 1);
+    }
+  </style>
+</head>
+<body class="flex flex-col md:flex-row h-screen w-screen overflow-hidden bg-slate-950 text-slate-100 select-none">
+
+  <!-- ===================================================================== -->
+  <!-- AREA VIEWPORT 3D UTAMA (CASING TERTIDUR, MOTHERBOARD, PSU & KABEL)    -->
+  <!-- ===================================================================== -->
+  <main class="relative flex-1 h-[56vh] md:h-full w-full overflow-hidden bg-gradient-to-b from-slate-900 via-slate-950 to-black">
+    <div id="canvas-container"></div>
+
+    <!-- Header Overlay Kiri Atas -->
+    <div class="absolute top-3 left-3 sm:top-4 sm:left-4 pointer-events-none flex flex-col gap-1.5 max-w-[88%] sm:max-w-md z-10">
+      <div class="flex items-center gap-2 pointer-events-auto">
+        <a href="../index.html#rakit" class="inline-flex items-center gap-1.5 bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 hover:border-sky-500/50 px-2.5 py-1 rounded-xl text-xs font-medium text-slate-300 hover:text-white transition shadow-lg active:scale-95" title="Kembali ke Beranda">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+          <span>Kembali</span>
+        </a>
+        <div class="inline-flex items-center gap-2 bg-slate-900/90 backdrop-blur-md border border-sky-500/40 px-3 py-1 rounded-xl shadow-lg w-fit">
+          <span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
+          <span id="header-stage-badge" class="text-[11px] font-semibold tracking-wider uppercase text-sky-300">Pemasangan Kabel Daya • Tahap 1</span>
+        </div>
+      </div>
+      <h1 class="text-sm sm:text-lg lg:text-xl font-bold text-white drop-shadow leading-tight">
+        Pemasangan Kabel Daya Utama ke Motherboard
+      </h1>
+      <!-- Pil Petunjuk Langkah Aktif Real-Time -->
+      <div id="live-instruction-pill" class="inline-flex items-center gap-2 text-[11px] sm:text-xs text-amber-200 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-amber-500/40 shadow-md w-fit">
+        <span class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
+        <span id="live-instruction-text">Tahap 1: Seret (drag) konektor ATX 24-Pin dari ruang PSU melewati lubang jalur kabel menuju slot ATX_PWR 24-PIN.</span>
+      </div>
+    </div>
+
+    <!-- Panel Kontrol Rotasi & Zoom Kamera (Atas-Kanan Viewport agar Tidak Menutupi Judul) -->
+    <div id="camera-orbit-hud" class="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 bg-slate-900/95 hover:bg-slate-900 backdrop-blur-md border border-sky-500/40 px-2.5 py-1.5 rounded-2xl shadow-2xl flex items-center gap-1">
+      <span class="hidden xl:inline text-[10px] font-semibold uppercase tracking-wider text-sky-300 px-1.5">Kamera</span>
+      <button id="btn-cam-left" type="button" title="Putar Kamera ke Kiri" class="p-2 rounded-xl bg-slate-800 hover:bg-sky-600 text-slate-100 border border-slate-700 transition active:scale-95">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+      <button id="btn-cam-up" type="button" title="Naikkan Sudut Kamera" class="p-2 rounded-xl bg-slate-800 hover:bg-sky-600 text-slate-100 border border-slate-700 transition active:scale-95">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+        </svg>
+      </button>
+      <button id="btn-cam-down" type="button" title="Turunkan Sudut Kamera" class="p-2 rounded-xl bg-slate-800 hover:bg-sky-600 text-slate-100 border border-slate-700 transition active:scale-95">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      <button id="btn-cam-right" type="button" title="Putar Kamera ke Kanan" class="p-2 rounded-xl bg-slate-800 hover:bg-sky-600 text-slate-100 border border-slate-700 transition active:scale-95">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+      <div class="w-px h-5 bg-slate-700 mx-0.5"></div>
+      <button id="btn-cam-zoom-in" type="button" title="Perdekat Kamera (Zoom In)" class="p-2 rounded-xl bg-slate-800 hover:bg-sky-600 text-slate-100 border border-slate-700 transition active:scale-95">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+        </svg>
+      </button>
+      <button id="btn-cam-zoom-out" type="button" title="Perjauh Kamera (Zoom Out)" class="p-2 rounded-xl bg-slate-800 hover:bg-sky-600 text-slate-100 border border-slate-700 transition active:scale-95">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" />
+        </svg>
+      </button>
+      <button id="btn-cam-reset-angle" type="button" title="Reset Sudut Kamera" class="p-2 rounded-xl bg-slate-800 hover:bg-amber-500/20 hover:border-amber-400 text-slate-200 hover:text-amber-300 border border-slate-700 transition active:scale-95">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Banner Hitung Mundur 3 Detik Setelah Kedua Kabel Terpasang -->
+    <div id="countdown-banner" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20">
+      <div class="bg-slate-900/95 border-2 border-emerald-400/80 backdrop-blur-xl px-6 py-4 rounded-2xl shadow-2xl text-center">
+        <div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-400 text-emerald-300 font-bold text-lg mb-2" id="countdown-number">
+          3
+        </div>
+        <h2 class="text-sm sm:text-base font-bold text-emerald-300">Kabel Daya Utama Terpasang Sempurna!</h2>
+        <p class="text-xs text-slate-300 mt-1">Memverifikasi penguncian klip ATX 24-Pin &amp; CPU EPS 8-Pin (4+4)...</p>
+      </div>
+    </div>
+
+    <!-- Bar Mengambang Mode Inspeksi Hasil -->
+    <div id="inspect-mode-bar" class="hidden absolute top-16 right-3 sm:top-16 sm:right-4 z-20 flex items-center gap-2 bg-slate-900/95 border border-emerald-500/50 backdrop-blur-md px-3 py-2 rounded-2xl shadow-xl">
+      <span class="text-xs text-emerald-300 font-medium hidden sm:inline">Mode Inspeksi Hasil</span>
+      <button id="btn-finish-from-inspect" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow transition active:scale-95">
+        Selesaikan Game
+      </button>
+    </div>
+
+    <!-- Bar Bawah Kiri: 5 Preset Sudut Kamera & Petunjuk Kontrol -->
+    <div class="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 flex flex-col xl:flex-row xl:items-center justify-between gap-2 pointer-events-none z-10">
+      <div class="flex flex-wrap items-center gap-1.5 pointer-events-auto">
+        <button data-cam="casingCables" class="cam-btn bg-sky-600 text-white border border-sky-400/60 px-2.5 py-1.5 rounded-xl text-xs font-medium shadow-md transition hover:bg-sky-500 active:scale-95">
+          Tampilan Casing &amp; Kabel
+        </button>
+        <button data-cam="psuCompartment" class="cam-btn bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 px-2.5 py-1.5 rounded-xl text-xs font-medium backdrop-blur-md shadow-md transition active:scale-95">
+          Fokus Ruang PSU &amp; Jalur Kabel
+        </button>
+        <button data-cam="atx24" class="cam-btn bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 px-2.5 py-1.5 rounded-xl text-xs font-medium backdrop-blur-md shadow-md transition active:scale-95">
+          Fokus Slot ATX 24-Pin
+        </button>
+        <button data-cam="cpu8" class="cam-btn bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 px-2.5 py-1.5 rounded-xl text-xs font-medium backdrop-blur-md shadow-md transition active:scale-95">
+          Fokus Slot CPU 8-Pin
+        </button>
+        <button data-cam="topDown" class="cam-btn bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 px-2.5 py-1.5 rounded-xl text-xs font-medium backdrop-blur-md shadow-md transition active:scale-95">
+          Tampak Atas
+        </button>
+      </div>
+
+      <!-- Petunjuk Interaksi -->
+      <div class="hidden 2xl:flex items-center bg-slate-900/85 backdrop-blur-md border border-slate-800 px-3 py-1.5 rounded-xl text-[11px] text-slate-300 gap-3 w-fit pointer-events-none">
+        <span>🔌 Drag Konektor: Pasang ke Slot</span>
+        <span>🔄 Drag Kosong: Orbit 360°</span>
+        <span>🔍 Scroll: Zoom</span>
+      </div>
+    </div>
+
+    <!-- Kotak Pesan / Toast Edukatif Non-Blocking -->
+    <div id="feedback-toast" class="pointer-events-none absolute top-24 sm:top-16 right-3 sm:right-4 max-w-xs sm:max-w-sm bg-slate-900/95 border border-sky-500/50 text-slate-100 px-3.5 py-2.5 rounded-xl shadow-2xl backdrop-blur-md transition-all duration-300 opacity-0 -translate-y-2 z-20">
+      <div class="flex items-start gap-2.5">
+        <span id="toast-dot" class="mt-1 w-2.5 h-2.5 rounded-full bg-sky-400 shrink-0"></span>
+        <div>
+          <p id="toast-title" class="text-xs font-semibold text-sky-300">Informasi</p>
+          <p id="toast-msg" class="text-xs text-slate-300 mt-0.5 leading-relaxed">Siap memasang kabel daya utama ke motherboard.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL PILIHAN SETELAH 3 DETIK KEDUA KABEL TERPASANG -->
+    <div id="choice-modal" class="hidden absolute inset-0 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 z-30">
+      <div class="bg-slate-900 border border-slate-700/90 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div>
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-emerald-400">Tahap Selesai</span>
+            <h2 class="text-lg font-bold text-white">Kabel Daya Utama Terhubung!</h2>
+          </div>
+        </div>
+
+        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+          Kabel daya utama <span class="text-sky-300 font-semibold">ATX 24-Pin (20+4)</span> dan kabel daya prosesor <span class="text-sky-300 font-semibold">CPU EPS 8-Pin (4+4)</span> dari PSU RM850x SHIFT telah terhubung dan terkunci rapat pada slot motherboard Intel ATX-Z790 Master.
+        </p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <button id="btn-inspect-result" class="w-full py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-600 text-xs sm:text-sm font-semibold transition active:scale-95">
+            Lihat Hasil Dahulu
+          </button>
+          <button id="btn-finish-game" class="w-full py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/50 text-xs sm:text-sm font-semibold shadow-lg shadow-emerald-950/50 transition active:scale-95">
+            Selesaikan Game
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL RINGKASAN AKHIR -->
+    <div id="summary-modal" class="hidden absolute inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-40">
+      <div class="bg-slate-900 border border-emerald-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5">
+        <div class="text-center space-y-2">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center text-emerald-300">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <span class="inline-block text-[11px] font-semibold uppercase tracking-widest text-emerald-400">Pemasangan Daya Utama Tuntas</span>
+          <h2 class="text-xl font-bold text-white">Kabel Daya Utama Terpasang Rapi</h2>
+          <p class="text-xs text-slate-300">Seluruh jalur distribusi daya utama PSU ke motherboard telah terhubung dengan penguncian mekanis yang tepat.</p>
+        </div>
+
+        <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 space-y-2 text-xs">
+          <div class="flex items-center justify-between text-slate-300">
+            <span>1. Kabel Daya Utama ATX 24-Pin (20+4)</span>
+            <span class="text-emerald-400 font-semibold">✓ Terkunci (ATX_PWR)</span>
+          </div>
+          <div class="flex items-center justify-between text-slate-300">
+            <span>2. Kabel Daya Prosesor CPU EPS 8-Pin (4+4)</span>
+            <span class="text-emerald-400 font-semibold">✓ Terkunci (CPU_PWR)</span>
+          </div>
+          <div class="flex items-center justify-between text-slate-300">
+            <span>3. Routing Bundel Kabel Multi-Strand</span>
+            <span class="text-emerald-400 font-semibold">✓ Rapi via Grommet</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <a href="../index.html#rakit" id="btn-back-home" class="w-full py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold text-center transition active:scale-95 flex items-center justify-center">
+            Kembali ke Menu
+          </a>
+          <button id="btn-restart-sim" class="w-full py-2.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-md transition active:scale-95">
+            Ulangi Simulasi
+          </button>
+          <a href="CABLE2.html" id="btn-next-sim" class="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold text-center shadow-md transition active:scale-95 flex items-center justify-center">
+            Simulasi Selanjutnya [Kabel Front Panel]
+          </a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- PANEL KONTROL KANAN (2 KARTU: INFO & STATUS KABEL + PROSEDUR)         -->
+  <!-- ===================================================================== -->
+  <aside class="w-full md:w-80 lg:w-96 h-[44vh] md:h-full bg-slate-950 border-t md:border-t-0 md:border-l border-slate-800 flex flex-col p-3 sm:p-3.5 gap-3 z-20 shadow-2xl overflow-y-auto">
+
+    <!-- KARTU 1: INFO & STATUS KABEL DAYA (TEMA KUNING CERAH) -->
+    <section class="bg-gradient-to-br from-amber-500/15 via-slate-900 to-amber-950/20 border-2 border-amber-400/80 rounded-2xl p-3.5 space-y-3 shrink-0 shadow-lg shadow-amber-500/10">
+      <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-amber-400/30">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shadow-sm shadow-amber-300"></span>
+          <div>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-amber-300">1. Info &amp; Status Kabel Daya</h2>
+            <p class="text-[11px] text-amber-200/70">RM850x SHIFT • ATX-Z790 Master</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button id="btn-highlight-target" type="button" class="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/50 text-xs font-semibold transition active:scale-95 shadow-sm">
+            Sorot Target
+          </button>
+          <button id="btn-reset-sim" type="button" class="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/50 text-xs font-medium transition active:scale-95">
+            Reset
+          </button>
+        </div>
+      </div>
+
+      <!-- Status Masing-Masing Kabel -->
+      <div class="grid grid-cols-2 gap-2">
+        <!-- Kartu Status & Visual ATX 24-Pin -->
+        <div id="status-card-atx24" class="p-2.5 rounded-xl bg-amber-400/10 border border-amber-400 transition">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-[11px] font-bold text-amber-300">ATX 24-Pin</span>
+            <span id="badge-status-atx24" class="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">Target</span>
+          </div>
+          <!-- Diagram Susunan Pin 20+4 -->
+          <div class="flex items-center justify-center gap-1 bg-slate-950 p-1.5 rounded-lg border border-slate-800 my-1">
+            <div class="grid grid-cols-10 gap-[2px]">
+              <span class="w-1.5 h-1.5 rounded-[1px] bg-amber-400"></span><span class="w-1.5 h-1.5 rounded-[1px] bg-amber-400"></span><span class="w-1.5 h-1.5 rounded-[1px] bg-sky-400"></span><span class="w-1.5 h-1.5 rounded-[1px] bg-amber-400"></span><span class="w-1.5 h-1.5 rounded-[1px] bg-slate-600"></span><span class="w-1.5 h-1.5 rounded-[1px] bg-amber-400"></span><span class="w-1.5 h-1.5 rounded-[1px] bg-slate-600"></span><span class="w-1.5 h-1.5 rounded-[1px] bg-sky-400"></span><span class="w-1.5 h-1.5 rounded-[1px] bg-amber-400"></span><span class="w-1.5 h-1.5 rounded-[1px] bg-amber-400"></span>
+              <span class="w-1.5 h-1.5 rounded-[1px] bg-sky-400"></span><span class="w-1.5 h-1.5 rounded-[1px] bg-amber-400"></span><span class="w-1.5 h-1.5 rounded-[1px] bg-slate-600"></span><span class="w-1.5 h-1.5 rounded-[1px] bg-amber-400"></span><span class="w-1.5 h-1.5 rounded-[1px] bg-amber-400"></span><span class="w-1.5 h-1.5 rounded-[1px] bg-sky-400"></span><span class="w-1.5 h-1.5 rounded-[1px] bg-amber-400"></span><span class="w-1.5 h-1.5 rounded-[1px] bg-slate-600"></span><span class="w-1.5 h-1.5 rounded-[1px] bg-amber-400"></span><span class="w-1.5 h-1.5 rounded-[1px] bg-sky-400"></span>
+            </div>
+            <div class="w-[1px] h-3.5 bg-slate-700"></div>
+            <div class="grid grid-cols-2 gap-[2px]">
+              <span class="w-1.5 h-1.5 rounded-[1px] bg-amber-400"></span><span class="w-1.5 h-1.5 rounded-[1px] bg-sky-400"></span>
+              <span class="w-1.5 h-1.5 rounded-[1px] bg-slate-600"></span><span class="w-1.5 h-1.5 rounded-[1px] bg-amber-400"></span>
+            </div>
+          </div>
+          <p class="text-[10px] text-slate-400 leading-snug">20+4 pin panjang, klip pengunci kanan.</p>
+        </div>
+
+        <!-- Kartu Status & Visual CPU EPS 8-Pin -->
+        <div id="status-card-cpu8" class="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 transition">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-[11px] font-bold text-slate-300">CPU 8-Pin</span>
+            <span id="badge-status-cpu8" class="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">Menunggu</span>
+          </div>
+          <!-- Diagram Susunan Pin 4+4 -->
+          <div class="flex items-center justify-center gap-1.5 bg-slate-950 p-1.5 rounded-lg border border-slate-800 my-1">
+            <div class="grid grid-cols-2 gap-[2px]">
+              <span class="w-2 h-1.5 rounded-[1px] bg-sky-400"></span><span class="w-2 h-1.5 rounded-[1px] bg-sky-400"></span>
+              <span class="w-2 h-1.5 rounded-[1px] bg-slate-600"></span><span class="w-2 h-1.5 rounded-[1px] bg-slate-600"></span>
+            </div>
+            <div class="w-[2px] h-3.5 bg-sky-500/50 rounded"></div>
+            <div class="grid grid-cols-2 gap-[2px]">
+              <span class="w-2 h-1.5 rounded-[1px] bg-sky-400"></span><span class="w-2 h-1.5 rounded-[1px] bg-sky-400"></span>
+              <span class="w-2 h-1.5 rounded-[1px] bg-slate-600"></span><span class="w-2 h-1.5 rounded-[1px] bg-slate-600"></span>
+            </div>
+          </div>
+          <p class="text-[10px] text-slate-400 leading-snug">4+4 pin terbelah, klip pengunci atas.</p>
+        </div>
+      </div>
+
+      <!-- Penjelasan Fungsi Kelistrikan Aktif -->
+      <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3 space-y-1">
+        <p id="cable-spec-title" class="text-xs font-semibold text-sky-300">Fungsi Kabel ATX 24-Pin (Motherboard Power)</p>
+        <p id="cable-spec-desc" class="text-[11px] text-slate-300 leading-relaxed">
+          Menyalurkan daya utama (+12V, +5V, +3.3V, dan +5VSB) dari PSU ke seluruh sirkuit motherboard, slot PCIe, RAM, chipset, serta sinyal <span class="font-mono text-amber-300">PS_ON</span> untuk mengaktifkan sistem.
+        </p>
+      </div>
+    </section>
+
+    <!-- KARTU 2: PROSEDUR PEMASANGAN KABEL DAYA (COLLAPSIBLE, PROGRES 0 / 2) -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex flex-col flex-1 min-h-0 shadow-lg">
+      <button id="btn-toggle-procedure" type="button" aria-expanded="true" class="w-full flex items-center justify-between text-left focus:outline-none group">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <h3 class="text-xs font-bold uppercase tracking-wider text-white group-hover:text-emerald-300 transition">2. Prosedur Pemasangan Kabel Daya</h3>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="step-progress-text" class="text-[11px] font-mono font-semibold text-sky-300">0 / 2</span>
+          <span class="w-6 h-6 rounded-lg bg-slate-800 group-hover:bg-slate-700 border border-slate-700/80 flex items-center justify-center text-slate-300 transition">
+            <svg id="procedure-chevron" class="w-3.5 h-3.5 transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </span>
+        </div>
+      </button>
+
+      <div id="procedure-content" class="mt-3 pt-3 border-t border-slate-800/80 overflow-y-auto pr-0.5">
+        <ol class="space-y-2.5 text-xs">
+          <li id="stage-item-1" class="flex items-start gap-2.5 p-2.5 rounded-xl bg-sky-500/15 border border-sky-500/50 text-slate-100">
+            <span class="stage-badge w-5 h-5 rounded-full bg-sky-400 text-slate-950 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">1</span>
+            <div class="space-y-1">
+              <p class="font-semibold">Tahap 1: Pemasangan Kabel ATX 24-Pin</p>
+              <p class="text-[11px] text-slate-300 leading-relaxed">
+                Pilih &amp; seret konektor <span class="text-amber-300 font-semibold">ATX 24-Pin (20+4)</span> dari ruang PSU melewati lubang jalur kabel menuju slot <span class="font-mono text-amber-300">ATX_PWR 24-PIN</span> di tepi kanan motherboard.
+              </p>
+            </div>
+          </li>
+
+          <li id="stage-item-2" class="flex items-start gap-2.5 p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 text-slate-400">
+            <span class="stage-badge w-5 h-5 rounded-full bg-slate-800 text-slate-400 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">2</span>
+            <div class="space-y-1">
+              <p class="font-semibold">Tahap 2: Pemasangan Kabel CPU EPS 8-Pin (4+4)</p>
+              <p class="text-[11px] text-slate-400 leading-relaxed">
+                Pilih &amp; seret konektor <span class="text-sky-300 font-semibold">CPU EPS 8-Pin (4+4)</span> dari ruang PSU melewati lubang jalur kabel menuju slot <span class="font-mono text-sky-300">CPU_PWR 8-PIN</span> di bagian atas motherboard.
+              </p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+  </aside>
+
+  <script>
+    /**
+     * ============================================================================
+     * 1. GENERATOR TEKSTUR PROSEDURAL (PCB, BRUSHED METAL, STIKER PSU & ESD MAT)
+     * ============================================================================
+     */
+    class ProceduralTextures {
+      static createPCBTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 1280;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#131720';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < canvas.width; i += 8) {
+          ctx.beginPath();
+          ctx.moveTo(i, 0);
+          ctx.lineTo(i, canvas.height);
+          ctx.stroke();
+        }
+        for (let j = 0; j < canvas.height; j += 8) {
+          ctx.beginPath();
+          ctx.moveTo(0, j);
+          ctx.lineTo(canvas.width, j);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = '#1e2636';
+        ctx.lineWidth = 2.5;
+        for (let i = 0; i < 18; i++) {
+          const yStart = 230 + i * 11;
+          ctx.beginPath();
+          ctx.moveTo(540, yStart);
+          ctx.lineTo(595, yStart - 18);
+          ctx.lineTo(665, yStart - 18);
+          ctx.stroke();
+        }
+        for (let i = 0; i < 16; i++) {
+          const xStart = 350 + i * 10;
+          ctx.beginPath();
+          ctx.moveTo(xStart, 415);
+          ctx.lineTo(xStart - 12, 480);
+          ctx.lineTo(xStart - 12, 680);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.16)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(80, 960);
+        ctx.lineTo(340, 1180);
+        ctx.lineTo(940, 1180);
+        ctx.stroke();
+
+        // Silkscreen Branding & Penanda Slot Motherboard
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = 'bold 24px Inter, sans-serif';
+        ctx.fillText('INTEL ATX-Z790 MASTER', 110, 920);
+
+        ctx.font = '600 14px monospace';
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText('REV 1.0 • DESIGNED FOR 3D SIMULATION', 110, 944);
+
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = 'bold 13px monospace';
+        ctx.fillText('LGA 1700 / 1851', 395, 192);
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillText('CPU_FAN', 585, 174);
+        ctx.fillStyle = '#e2e8f0';
+        ctx.fillText('DIMM_A1  A2  B1  B2', 662, 130);
+        ctx.fillText('M.2_1 (SOCKET 3) PCIe 5.0 x4', 285, 535);
+        ctx.fillText('PCIEX16 (GEN 5.0)', 235, 675);
+        ctx.fillText('PCIEX4_1', 235, 825);
+        ctx.fillText('PCIEX1_1', 235, 965);
+
+        // Label Silkscreen Kuning Terang untuk Kedua Slot Daya Utama
+        ctx.fillStyle = '#facc15';
+        ctx.font = 'bold 15px monospace';
+        ctx.fillText('ATX_PWR 24-PIN', 822, 376);
+        ctx.fillText('CPU_PWR 8-PIN', 195, 42);
+
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = 'bold 13px monospace';
+        ctx.fillText('SATA6G_1-4', 865, 1115);
+        ctx.fillText('F_PANEL', 780, 1235);
+
+        // 9 Lubang Baut Standoff Presisi
+        const holeCoords3D = [
+          [-11.0, -14.0], [0.0, -14.0], [10.8, -14.0],
+          [-11.0,   0.0], [0.0,   0.0], [10.8,   0.0],
+          [-11.0,  13.8], [0.0,  13.8], [10.8,  13.8]
+        ];
+        const mountingHoles = holeCoords3D.map(([x3d, z3d]) => [
+          ((x3d / 24.4) + 0.5) * canvas.width,
+          ((z3d / 30.5) + 0.5) * canvas.height
+        ]);
+
+        mountingHoles.forEach(([hx, hy]) => {
+          ctx.beginPath();
+          ctx.arc(hx, hy, 15, 0, Math.PI * 2);
+          ctx.fillStyle = '#d4af37';
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(hx, hy, 7, 0, Math.PI * 2);
+          ctx.fillStyle = '#090d14';
+          ctx.fill();
+        });
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.anisotropy = 8;
+        return texture;
+      }
+
+      static createBrushedMetalTexture(baseHex = '#272e3b', lineHex = '#384252') {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = baseHex;
+        ctx.fillRect(0, 0, 256, 256);
+
+        ctx.strokeStyle = lineHex;
+        ctx.lineWidth = 1;
+        for (let y = 0; y < 256; y += 2) {
+          ctx.globalAlpha = 0.25 + Math.random() * 0.35;
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(256, y);
+          ctx.stroke();
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        return texture;
+      }
+
+      static createPSUStickerTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, 1024, 512);
+
+        ctx.fillStyle = '#facc15';
+        ctx.fillRect(0, 0, 1024, 24);
+        ctx.fillRect(0, 488, 1024, 24);
+
+        ctx.strokeStyle = 'rgba(250, 204, 21, 0.38)';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(20, 38, 984, 436);
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = 'bold 54px Inter, sans-serif';
+        ctx.fillText('RM850x SHIFT', 56, 132);
+
+        ctx.fillStyle = '#facc15';
+        ctx.font = 'bold 30px monospace';
+        ctx.fillText('850W • 80 PLUS GOLD • FULL MODULAR ATX 3.0', 56, 188);
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '600 22px monospace';
+        ctx.fillText('AC INPUT: 100-240V ~ 10A-5A • 50-60Hz', 56, 252);
+        ctx.fillText('DC OUTPUT: +12V 70.8A (850W) • +5V 20A • +3.3V 20A', 56, 294);
+        ctx.fillText('ZERO RPM FAN MODE • OVP / UVP / SCP / OTP', 56, 336);
+
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(790, 250, 180, 190);
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(790, 250, 180, 190);
+
+        ctx.fillStyle = '#facc15';
+        ctx.font = 'bold 48px Inter, sans-serif';
+        ctx.fillText('80', 845, 315);
+        ctx.font = 'bold 26px monospace';
+        ctx.fillText('PLUS', 842, 355);
+        ctx.fillStyle = '#fef08a';
+        ctx.font = 'bold 30px Inter, sans-serif';
+        ctx.fillText('GOLD', 834, 405);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.anisotropy = 8;
+        return texture;
+      }
+
+      static createConnectorLabelTexture(text, badgeColor = '#facc15') {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 128;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#090d16';
+        ctx.fillRect(0, 0, 512, 128);
+
+        ctx.strokeStyle = badgeColor;
+        ctx.lineWidth = 8;
+        ctx.strokeRect(6, 6, 500, 116);
+
+        ctx.fillStyle = badgeColor;
+        ctx.font = 'bold 48px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, 256, 66);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.anisotropy = 4;
+        return texture;
+      }
+
+      static createESDMatTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 1024;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#162032';
+        ctx.fillRect(0, 0, 1024, 1024);
+
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.14)';
+        ctx.lineWidth = 1.5;
+        const step = 32;
+        for (let x = 0; x <= 1024; x += step) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, 1024);
+          ctx.stroke();
+        }
+        for (let y = 0; y <= 1024; y += step) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(1024, y);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.38)';
+        ctx.lineWidth = 6;
+        ctx.strokeRect(20, 20, 984, 984);
+
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.48)';
+        ctx.font = 'bold 18px monospace';
+        ctx.fillText('ESD SAFE WORKBENCH MAT • ANTI-STATIC SURFACE', 44, 982);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.anisotropy = 8;
+        return texture;
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 2. MODEL 3D MEJA KERJA TEKNISI LUAS (WORKBENCH + ESD MAT)
+     * ============================================================================
+     */
+    class WorkbenchTable3D {
+      constructor() {
+        this.group = new THREE.Group();
+        this.group.name = 'Technician_Workbench_Wide';
+
+        const woodMat = new THREE.MeshStandardMaterial({ color: '#2b2118', roughness: 0.65, metalness: 0.08 });
+        const trimMat = new THREE.MeshStandardMaterial({ color: '#18181b', roughness: 0.5, metalness: 0.4 });
+        const steelLegMat = new THREE.MeshStandardMaterial({ color: '#1e293b', roughness: 0.35, metalness: 0.8 });
+        const esdTex = ProceduralTextures.createESDMatTexture();
+        const esdMat = new THREE.MeshStandardMaterial({ map: esdTex, roughness: 0.78, metalness: 0.05 });
+
+        // Meja kayu luas (96 x 1.5 x 74 di posisi (1.5, -1.10, 0))
+        const tableTop = new THREE.Mesh(new THREE.BoxGeometry(96, 1.5, 74), woodMat);
+        tableTop.position.set(1.5, -1.10, 0);
+        tableTop.receiveShadow = true;
+        this.group.add(tableTop);
+
+        const edgeRim = new THREE.Mesh(new THREE.BoxGeometry(96.4, 1.56, 74.4), trimMat);
+        edgeRim.position.set(1.5, -1.12, 0);
+        this.group.add(edgeRim);
+
+        // Matras anti-statis ESD Mat (88 x 0.04 x 66 di (1.5, -0.33, 0))
+        const esdPad = new THREE.Mesh(new THREE.BoxGeometry(88, 0.04, 66), esdMat);
+        esdPad.position.set(1.5, -0.33, 0);
+        esdPad.receiveShadow = true;
+        this.group.add(esdPad);
+
+        const legGeo = new THREE.BoxGeometry(2.0, 26, 2.0);
+        [
+          [-41.5, -14.5, -34],
+          [44.5, -14.5, -34],
+          [-41.5, -14.5, 34],
+          [44.5, -14.5, 34]
+        ].forEach(([lx, ly, lz]) => {
+          const leg = new THREE.Mesh(legGeo, steelLegMat);
+          leg.position.set(lx, ly, lz);
+          this.group.add(leg);
+        });
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 3. MODEL 3D MOTHERBOARD TERISI LENGKAP (INTEL ATX-Z790 MASTER)
+     * ============================================================================
+     */
+    class MotherboardComplete3D {
+      constructor() {
+        this.group = new THREE.Group();
+        this.group.name = 'Intel_ATX_Complete_Motherboard';
+
+        this.dimensions = {
+          width: 24.4,
+          length: 30.5,
+          thickness: 0.24
+        };
+
+        this.anchors = {
+          cpu: new THREE.Vector3(-1.5, 0.22, -7.2),
+          cpuFanHeader: new THREE.Vector3(2.45, 0.22, -10.6),
+          ram: [
+            new THREE.Vector3(3.8, 0.25, -7.2),
+            new THREE.Vector3(4.8, 0.25, -7.2),
+            new THREE.Vector3(5.8, 0.25, -7.2),
+            new THREE.Vector3(6.8, 0.25, -7.2)
+          ],
+          ssd: new THREE.Vector3(-1.4, 0.24, -1.6),
+          gpu: new THREE.Vector3(-1.5, 0.28, 3.8),
+          ports: {
+            atx24: new THREE.Vector3(10.8, 1.38, -5.2),
+            cpu8:  new THREE.Vector3(-5.8, 1.38, -14.1)
+          }
+        };
+
+        this.slotGuides = {};
+
+        this._initMaterials();
+        this._buildPCB();
+        this._buildVRMAndIO();
+        this._buildInstalledCPUCooler();
+        this._buildInstalledRAM();
+        this._buildM2Heatsink();
+        this._buildInstalledGPU();
+        this._buildDetailedPowerSlots();
+        this._buildInstalledStandoffScrews();
+      }
+
+      _initMaterials() {
+        const pcbTex = ProceduralTextures.createPCBTexture();
+        const darkMetalTex = ProceduralTextures.createBrushedMetalTexture('#232a36', '#334155');
+        const silverMetalTex = ProceduralTextures.createBrushedMetalTexture('#94a3b8', '#cbd5e1');
+
+        this.materials = {
+          pcbTop: new THREE.MeshStandardMaterial({ map: pcbTex, roughness: 0.48, metalness: 0.15 }),
+          pcbEdge: new THREE.MeshStandardMaterial({ color: '#1e293b', roughness: 0.6, metalness: 0.2 }),
+          heatsinkDark: new THREE.MeshStandardMaterial({ map: darkMetalTex, roughness: 0.35, metalness: 0.78 }),
+          heatsinkSilver: new THREE.MeshStandardMaterial({ map: silverMetalTex, roughness: 0.28, metalness: 0.85 }),
+          chromeSteel: new THREE.MeshStandardMaterial({ color: '#d1d5db', roughness: 0.22, metalness: 0.92 }),
+          darkPlastic: new THREE.MeshStandardMaterial({ color: '#18181b', roughness: 0.55, metalness: 0.08 }),
+          slotPlastic: new THREE.MeshStandardMaterial({ color: '#1e2430', roughness: 0.45, metalness: 0.15 }),
+          grayPlastic: new THREE.MeshStandardMaterial({ color: '#475569', roughness: 0.5, metalness: 0.1 }),
+          goldPin: new THREE.MeshStandardMaterial({ color: '#fbbf24', roughness: 0.2, metalness: 0.96 }),
+          accentCyan: new THREE.MeshStandardMaterial({
+            color: '#0ea5e9',
+            emissive: '#0284c7',
+            emissiveIntensity: 0.32,
+            roughness: 0.3,
+            metalness: 0.4
+          })
+        };
+      }
+
+      _buildPCB() {
+        const { width, length, thickness } = this.dimensions;
+        const geo = new THREE.BoxGeometry(width, thickness, length);
+        const materials = [
+          this.materials.pcbEdge,
+          this.materials.pcbEdge,
+          this.materials.pcbTop,
+          this.materials.pcbEdge,
+          this.materials.pcbEdge,
+          this.materials.pcbEdge
+        ];
+        const pcbMesh = new THREE.Mesh(geo, materials);
+        pcbMesh.position.y = -thickness / 2;
+        pcbMesh.receiveShadow = true;
+        pcbMesh.castShadow = true;
+        this.group.add(pcbMesh);
+      }
+
+      _buildVRMAndIO() {
+        const ioShroud = new THREE.Mesh(new THREE.BoxGeometry(3.8, 2.2, 10.6), this.materials.heatsinkDark);
+        ioShroud.position.set(-9.9, 1.25, -7.2);
+        ioShroud.castShadow = true;
+        this.group.add(ioShroud);
+
+        const ioTop = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.22, 10.0), this.materials.heatsinkSilver);
+        ioTop.position.set(-9.7, 2.45, -7.2);
+        this.group.add(ioTop);
+
+        [-11.6, -9.9, -8.2, -6.5, -4.8, -3.1].forEach((pz, idx) => {
+          const port = new THREE.Mesh(
+            new THREE.BoxGeometry(0.55, 1.35, 1.3),
+            idx === 3 ? this.materials.accentCyan : this.materials.chromeSteel
+          );
+          port.position.set(-12.05, 0.85, pz);
+          this.group.add(port);
+        });
+
+        // VRM Heatsink atas diposisikan di x = -0.3 agar slot CPU_PWR 8-PIN di x = -5.8 terbuka jelas
+        const topVrm = new THREE.Mesh(new THREE.BoxGeometry(6.6, 1.65, 2.1), this.materials.heatsinkDark);
+        topVrm.position.set(-0.3, 0.9, -12.0);
+        topVrm.castShadow = true;
+        this.group.add(topVrm);
+      }
+
+      _buildInstalledCPUCooler() {
+        // CPU Cooling Fan terpasang rapi dalam posisi diam (tidak berputar)
+        const coolerRoot = new THREE.Group();
+        coolerRoot.position.set(this.anchors.cpu.x, 0.25, this.anchors.cpu.z);
+
+        const copperBase = new THREE.Mesh(
+          new THREE.CylinderGeometry(1.65, 1.65, 0.24, 24),
+          new THREE.MeshStandardMaterial({ color: '#d97706', roughness: 0.25, metalness: 0.9 })
+        );
+        copperBase.position.y = 0.12;
+        coolerRoot.add(copperBase);
+
+        const finCore = new THREE.Mesh(
+          new THREE.CylinderGeometry(2.55, 2.55, 1.25, 24),
+          this.materials.heatsinkSilver
+        );
+        finCore.position.y = 0.85;
+        finCore.castShadow = true;
+        coolerRoot.add(finCore);
+
+        const shroudRing = new THREE.Mesh(
+          new THREE.TorusGeometry(2.75, 0.22, 14, 36),
+          this.materials.darkPlastic
+        );
+        shroudRing.rotation.x = Math.PI / 2;
+        shroudRing.position.y = 1.62;
+        coolerRoot.add(shroudRing);
+
+        const ledRing = new THREE.Mesh(
+          new THREE.TorusGeometry(2.75, 0.06, 10, 36),
+          this.materials.accentCyan
+        );
+        ledRing.rotation.x = Math.PI / 2;
+        ledRing.position.y = 1.82;
+        coolerRoot.add(ledRing);
+
+        const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.3, 20), this.materials.darkPlastic);
+        hub.position.y = 1.62;
+        coolerRoot.add(hub);
+
+        for (let b = 0; b < 9; b++) {
+          const ang = (b / 9) * Math.PI * 2;
+          const blade = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.05, 0.48), this.materials.grayPlastic);
+          blade.position.set(Math.cos(ang) * 1.65, 1.62, Math.sin(ang) * 1.65);
+          blade.rotation.y = -ang;
+          blade.rotation.x = 0.38;
+          coolerRoot.add(blade);
+        }
+
+        this.group.add(coolerRoot);
+
+        // Kabel 4-Pin PWM fan sudah terpasang ke header CPU_FAN
+        const pwmHeader = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.48, 0.42), this.materials.darkPlastic);
+        pwmHeader.position.set(this.anchors.cpuFanHeader.x, 0.38, this.anchors.cpuFanHeader.z);
+        this.group.add(pwmHeader);
+
+        const pwmCurve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(this.anchors.cpu.x + 1.9, 1.35, this.anchors.cpu.z - 1.9),
+          new THREE.Vector3(this.anchors.cpu.x + 2.9, 1.65, this.anchors.cpu.z - 2.9),
+          new THREE.Vector3(this.anchors.cpuFanHeader.x, 0.58, this.anchors.cpuFanHeader.z)
+        ]);
+        const pwmTube = new THREE.Mesh(
+          new THREE.TubeGeometry(pwmCurve, 16, 0.08, 8, false),
+          this.materials.darkPlastic
+        );
+        this.group.add(pwmTube);
+      }
+
+      _buildInstalledRAM() {
+        // 4 slot DIMM dengan 2 keping RAM DDR5 terpasang pada konfigurasi dual-channel (DIMM_A2 & DIMM_B2)
+        this.anchors.ram.forEach((anchor, idx) => {
+          const slot = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.65, 13.0), this.materials.darkPlastic);
+          slot.position.set(anchor.x, 0.325, anchor.z);
+          this.group.add(slot);
+
+          if (idx === 1 || idx === 3) {
+            const stick = new THREE.Mesh(new THREE.BoxGeometry(0.32, 1.85, 12.6), this.materials.heatsinkDark);
+            stick.position.set(anchor.x, 1.15, anchor.z);
+            stick.castShadow = true;
+            this.group.add(stick);
+
+            const rgbBar = new THREE.Mesh(
+              new THREE.BoxGeometry(0.34, 0.16, 12.4),
+              this.materials.accentCyan
+            );
+            rgbBar.position.set(anchor.x, 2.12, anchor.z);
+            this.group.add(rgbBar);
+          }
+        });
+      }
+
+      _buildM2Heatsink() {
+        const { x, z } = this.anchors.ssd;
+        const hs = new THREE.Mesh(new THREE.BoxGeometry(7.8, 0.35, 2.1), this.materials.heatsinkDark);
+        hs.position.set(x, 0.32, z);
+        hs.castShadow = true;
+        this.group.add(hs);
+      }
+
+      _buildInstalledGPU() {
+        // Kartu Grafis (GPU) terpasang di slot PCIe x16 dengan panjang proporsional agar tidak menutupi slot ATX 24-pin maupun CPU 8-pin
+        const gpuRoot = new THREE.Group();
+        gpuRoot.position.set(this.anchors.gpu.x, 0.25, this.anchors.gpu.z);
+
+        const pcieSlot = new THREE.Mesh(new THREE.BoxGeometry(13.8, 0.65, 0.8), this.materials.chromeSteel);
+        pcieSlot.position.y = 0.325;
+        gpuRoot.add(pcieSlot);
+
+        const gpuBody = new THREE.Mesh(new THREE.BoxGeometry(17.8, 3.1, 2.3), this.materials.heatsinkDark);
+        gpuBody.position.set(-1.3, 2.1, 0);
+        gpuBody.castShadow = true;
+        gpuRoot.add(gpuBody);
+
+        const backplate = new THREE.Mesh(new THREE.BoxGeometry(17.9, 0.16, 2.36), this.materials.heatsinkSilver);
+        backplate.position.set(-1.3, 3.72, 0);
+        gpuRoot.add(backplate);
+
+        const accentLine = new THREE.Mesh(new THREE.BoxGeometry(13.8, 0.14, 0.12), this.materials.accentCyan);
+        accentLine.position.set(-1.1, 3.3, 1.19);
+        gpuRoot.add(accentLine);
+
+        const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.18, 4.0, 2.5), this.materials.chromeSteel);
+        bracket.position.set(-10.5, 2.0, 0);
+        gpuRoot.add(bracket);
+
+        this.group.add(gpuRoot);
+      }
+
+      _buildDetailedPowerSlots() {
+        // ====================================================================
+        // A. SLOT ATX_PWR 24-PIN (TEPI KANAN MOTHERBOARD: x = 10.8, z = -5.2)
+        // ====================================================================
+        const atxSlotGroup = new THREE.Group();
+        atxSlotGroup.position.set(10.8, 0, -5.2);
+
+        const atxW = 1.28;
+        const atxH = 1.38;
+        const atxL = 5.4;
+        const wallT = 0.14;
+
+        const wallLeft = new THREE.Mesh(new THREE.BoxGeometry(wallT, atxH, atxL), this.materials.slotPlastic);
+        wallLeft.position.set(-atxW / 2 + wallT / 2, atxH / 2, 0);
+        const wallRight = new THREE.Mesh(new THREE.BoxGeometry(wallT, atxH, atxL), this.materials.slotPlastic);
+        wallRight.position.set(atxW / 2 - wallT / 2, atxH / 2, 0);
+        const wallFront = new THREE.Mesh(new THREE.BoxGeometry(atxW, atxH, wallT), this.materials.slotPlastic);
+        wallFront.position.set(0, atxH / 2, atxL / 2 - wallT / 2);
+        const wallBack = new THREE.Mesh(new THREE.BoxGeometry(atxW, atxH, wallT), this.materials.slotPlastic);
+        wallBack.position.set(0, atxH / 2, -atxL / 2 + wallT / 2);
+        const slotFloor = new THREE.Mesh(new THREE.BoxGeometry(atxW, 0.22, atxL), this.materials.darkPlastic);
+        slotFloor.position.set(0, 0.11, 0);
+
+        const centerDivider = new THREE.Mesh(new THREE.BoxGeometry(0.08, atxH * 0.85, atxL - wallT * 2), this.materials.slotPlastic);
+        centerDivider.position.set(0, atxH * 0.45, 0);
+
+        const split20Plus4 = new THREE.Mesh(new THREE.BoxGeometry(atxW - wallT * 2, atxH * 0.88, 0.10), this.materials.slotPlastic);
+        split20Plus4.position.set(0, atxH * 0.45, 1.72);
+
+        // Bibir pengait locking clip di sisi kanan (+X)
+        const atxLatchCatch = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.36, 1.35), this.materials.slotPlastic);
+        atxLatchCatch.position.set(atxW / 2 + 0.06, atxH * 0.72, -0.35);
+
+        atxSlotGroup.add(wallLeft, wallRight, wallFront, wallBack, slotFloor, centerDivider, split20Plus4, atxLatchCatch);
+
+        for (let row = 0; row < 12; row++) {
+          const pz = -2.32 + row * 0.42 + (row >= 10 ? 0.06 : 0);
+          for (let col = 0; col < 2; col++) {
+            const px = -0.26 + col * 0.52;
+            const pin = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.92, 0.12), this.materials.goldPin);
+            pin.position.set(px, 0.65, pz);
+            atxSlotGroup.add(pin);
+          }
+        }
+
+        this.group.add(atxSlotGroup);
+
+        // ====================================================================
+        // B. SLOT CPU_PWR 8-PIN (TEPI ATAS MOTHERBOARD: x = -5.8, z = -14.1)
+        // ====================================================================
+        const cpuSlotGroup = new THREE.Group();
+        cpuSlotGroup.position.set(-5.8, 0, -14.1);
+
+        const cpuW = 2.15;
+        const cpuH = 1.38;
+        const cpuD = 1.28;
+
+        const cWallBack = new THREE.Mesh(new THREE.BoxGeometry(cpuW, cpuH, wallT), this.materials.slotPlastic);
+        cWallBack.position.set(0, cpuH / 2, -cpuD / 2 + wallT / 2);
+        const cWallFront = new THREE.Mesh(new THREE.BoxGeometry(cpuW, cpuH, wallT), this.materials.slotPlastic);
+        cWallFront.position.set(0, cpuH / 2, cpuD / 2 - wallT / 2);
+        const cWallLeft = new THREE.Mesh(new THREE.BoxGeometry(wallT, cpuH, cpuD), this.materials.slotPlastic);
+        cWallLeft.position.set(-cpuW / 2 + wallT / 2, cpuH / 2, 0);
+        const cWallRight = new THREE.Mesh(new THREE.BoxGeometry(wallT, cpuH, cpuD), this.materials.slotPlastic);
+        cWallRight.position.set(cpuW / 2 - wallT / 2, cpuH / 2, 0);
+        const cFloor = new THREE.Mesh(new THREE.BoxGeometry(cpuW, 0.22, cpuD), this.materials.darkPlastic);
+        cFloor.position.set(0, 0.11, 0);
+
+        const cDivX = new THREE.Mesh(new THREE.BoxGeometry(0.10, cpuH * 0.85, cpuD - wallT * 2), this.materials.slotPlastic);
+        cDivX.position.set(0, cpuH * 0.45, 0);
+        const cDivZ = new THREE.Mesh(new THREE.BoxGeometry(cpuW - wallT * 2, cpuH * 0.85, 0.08), this.materials.slotPlastic);
+        cDivZ.position.set(0, cpuH * 0.45, 0);
+
+        // Bibir pengait locking clip di sisi atas (-Z)
+        const cpuLatchCatch = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.36, 0.16), this.materials.slotPlastic);
+        cpuLatchCatch.position.set(0, cpuH * 0.72, -cpuD / 2 - 0.06);
+
+        cpuSlotGroup.add(cWallBack, cWallFront, cWallLeft, cWallRight, cFloor, cDivX, cDivZ, cpuLatchCatch);
+
+        for (let col = 0; col < 4; col++) {
+          const px = -0.69 + col * 0.46;
+          for (let row = 0; row < 2; row++) {
+            const pz = -0.26 + row * 0.52;
+            const pin = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.92, 0.13), this.materials.goldPin);
+            pin.position.set(px, 0.65, pz);
+            cpuSlotGroup.add(pin);
+          }
+        }
+
+        this.group.add(cpuSlotGroup);
+
+        // ====================================================================
+        // C. BINGKAI SOROT TARGET SLOT
+        // ====================================================================
+        const createSlotHighlight = (w, h, d, pos, key) => {
+          const frame = new THREE.LineSegments(
+            new THREE.EdgesGeometry(new THREE.BoxGeometry(w, h, d)),
+            new THREE.LineBasicMaterial({ color: '#facc15', transparent: true, opacity: 0.0 })
+          );
+          frame.position.copy(pos);
+          this.group.add(frame);
+          this.slotGuides[key] = frame;
+        };
+
+        createSlotHighlight(1.95, 1.85, 6.0, new THREE.Vector3(10.8, 0.92, -5.2), 'atx24');
+        createSlotHighlight(2.85, 1.85, 1.95, new THREE.Vector3(-5.8, 0.92, -14.1), 'cpu8');
+      }
+
+      _buildInstalledStandoffScrews() {
+        const pch = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.65, 5.4), this.materials.heatsinkDark);
+        pch.position.set(5.6, 0.325, 8.2);
+        this.group.add(pch);
+
+        const cmosHolder = new THREE.Mesh(new THREE.CylinderGeometry(1.18, 1.18, 0.35, 24), this.materials.darkPlastic);
+        cmosHolder.position.set(1.3, 0.175, 4.6);
+        const cmosBattery = new THREE.Mesh(new THREE.CylinderGeometry(0.98, 0.98, 0.16, 24), this.materials.chromeSteel);
+        cmosBattery.position.set(1.3, 0.36, 4.6);
+        this.group.add(cmosHolder, cmosBattery);
+
+        const screwMat = new THREE.MeshStandardMaterial({ color: '#e2e8f0', roughness: 0.22, metalness: 0.92 });
+        const slotMat = new THREE.MeshBasicMaterial({ color: '#0f172a' });
+        const holeCoords = [
+          [-11.0, -14.0], [0.0, -14.0], [10.8, -14.0],
+          [-11.0,   0.0], [0.0,   0.0], [10.8,   0.0],
+          [-11.0,  13.8], [0.0,  13.8], [10.8,  13.8]
+        ];
+        holeCoords.forEach(([hx, hz]) => {
+          const sc = new THREE.Group();
+          sc.position.set(hx, 0.32, hz);
+          const washer = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.04, 16), screwMat);
+          const head = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.14, 16), screwMat);
+          head.position.y = 0.08;
+          const s1 = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.03, 0.05), slotMat);
+          s1.position.y = 0.155;
+          sc.add(washer, head, s1);
+          this.group.add(sc);
+        });
+      }
+
+      updateSlotHighlights(activeSlotKey, hoveredSlotKey, boostSec, elapsedSec) {
+        const pulse = 1.0 + Math.sin(elapsedSec * (boostSec > 0 ? 13.0 : 7.0)) * (boostSec > 0 ? 0.09 : 0.045);
+        Object.entries(this.slotGuides).forEach(([key, frame]) => {
+          if (key === hoveredSlotKey) {
+            frame.material.color.set(key === activeSlotKey ? '#10b981' : '#ef4444');
+            frame.material.opacity = 1.0;
+            frame.scale.set(1.07, 1.07, 1.07);
+          } else if (key === activeSlotKey) {
+            frame.material.color.set('#facc15');
+            frame.material.opacity = boostSec > 0 ? 1.0 : 0.92;
+            frame.scale.set(pulse, 1.0, pulse);
+          } else {
+            frame.material.opacity = 0.0;
+            frame.scale.set(1, 1, 1);
+          }
+        });
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 4. MODEL 3D CASING KOMPUTER TERTIDUR DI MEJA & PSU MODULAR (PCCasing3D)
+     *    - Sisi terbuka menghadap ke atas (+Y) ke arah POV pengguna
+     *    - Panel belakang (Rear I/O & PSU) di sisi kiri (-X)
+     *    - Bagian depan casing di sisi kanan (+X)
+     *    - Bagian atas casing di (-Z)
+     *    - Kompartemen PSU di kiri-bawah (+Z, -X) dengan grommet kabel bawah-kiri
+     * ============================================================================
+     */
+    class PCCasing3D {
+      constructor() {
+        this.group = new THREE.Group();
+        this.group.name = 'ATX_MidTower_Casing_Lying_Flat';
+
+        this.dimensions = {
+          widthX: 41.0, // Belakang (-X) ke Depan (+X)
+          heightY: 13.5, // Tebal casing saat tertidur rata di atas meja
+          depthZ: 43.0  // Atas (-Z) ke Bawah (+Z)
+        };
+
+        this.anchors = {
+          // Motherboard datar menghadap ke atas (+Y) di zona atas-tengah tray
+          motherboard: new THREE.Vector3(-3.2, 2.25, -4.8),
+          // PSU RM850x SHIFT terpasang rapi di kompartemen kiri-bawah (-X, +Z)
+          psu: new THREE.Vector3(-13.6, 0.45, 16.0)
+        };
+
+        this.isSystemPowered = false;
+
+        this._initMaterials();
+        this._buildLyingChassisAndWalls();
+        this._buildRearPanelAndPSUBracket();
+        this._buildInstalledPSU();
+        this._buildCableRoutingGrommets();
+      }
+
+      _initMaterials() {
+        const steelTex = ProceduralTextures.createBrushedMetalTexture('#161d29', '#243042');
+        this.materials = {
+          chassisDark: new THREE.MeshStandardMaterial({ map: steelTex, roughness: 0.45, metalness: 0.72 }),
+          chassisBlack: new THREE.MeshStandardMaterial({ color: '#0f172a', roughness: 0.5, metalness: 0.6 }),
+          chromeSteel: new THREE.MeshStandardMaterial({ color: '#cbd5e1', roughness: 0.24, metalness: 0.92 }),
+          rubberGrommet: new THREE.MeshStandardMaterial({ color: '#090d14', roughness: 0.85 }),
+          ledStrip: new THREE.MeshStandardMaterial({
+            color: '#0ea5e9',
+            emissive: '#0284c7',
+            emissiveIntensity: 0.22,
+            roughness: 0.25
+          })
+        };
+      }
+
+      _buildLyingChassisAndWalls() {
+        const { widthX, heightY, depthZ } = this.dimensions;
+        const wallThick = 0.55;
+
+        // 1. Alas Bawah Casing (sisi kanan casing yang tertidur rata di atas matras ESD meja)
+        const baseSidePanel = new THREE.Mesh(new THREE.BoxGeometry(widthX, 0.45, depthZ), this.materials.chassisBlack);
+        baseSidePanel.position.set(0, 0.225, 0);
+        baseSidePanel.receiveShadow = true;
+        this.group.add(baseSidePanel);
+
+        // 2. Dinding Atas Casing (-Z) dengan lubang manajemen kabel atas untuk CPU 8-Pin
+        const topWall = new THREE.Mesh(new THREE.BoxGeometry(widthX, heightY, wallThick), this.materials.chassisDark);
+        topWall.position.set(0, heightY / 2, -depthZ / 2 + wallThick / 2);
+        topWall.castShadow = true;
+        topWall.receiveShadow = true;
+        this.group.add(topWall);
+
+        // 3. Dinding Depan Casing (+X) dengan aksen LED depan
+        const frontWall = new THREE.Mesh(new THREE.BoxGeometry(wallThick, heightY, depthZ), this.materials.chassisBlack);
+        frontWall.position.set(widthX / 2 - wallThick / 2, heightY / 2, 0);
+        frontWall.castShadow = true;
+        this.group.add(frontWall);
+
+        const frontLed = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.35, depthZ - 3.0), this.materials.ledStrip);
+        frontLed.position.set(widthX / 2 + 0.04, heightY - 0.5, 0);
+        this.group.add(frontLed);
+
+        // 4. Dinding Bawah Casing (+Z) Utuh Menutup Bagian Bawah Casing
+        const bottomWall = new THREE.Mesh(new THREE.BoxGeometry(widthX, heightY, wallThick), this.materials.chassisDark);
+        bottomWall.position.set(0, heightY / 2, depthZ / 2 - wallThick / 2);
+        bottomWall.castShadow = true;
+        bottomWall.receiveShadow = true;
+        this.group.add(bottomWall);
+
+        // 5. Tray Motherboard Datar di dalam Casing (y = 2.0)
+        const mbTray = new THREE.Mesh(new THREE.BoxGeometry(widthX - 1.4, 0.32, 31.8), this.materials.chassisDark);
+        mbTray.position.set(0, 2.0, -4.8);
+        mbTray.receiveShadow = true;
+        this.group.add(mbTray);
+
+        // 6. Dinding Pembatas Ruangan PSU & Ruangan Motherboard (z = 11.1)
+        //    Dilengkapi Lubang Jalur Kabel Khusus (Pass-Through) di x = 1.5 s.d. 10.5
+        const dividerY = 5.8;
+        const dividerZ = 11.1;
+        const dividerThick = 0.42;
+
+        // Sisi kiri dinding pembatas (x = -19.8 s.d. +1.5 -> lebar 21.3, pusat x = -9.15)
+        const dividerLeft = new THREE.Mesh(
+          new THREE.BoxGeometry(21.3, dividerY, dividerThick),
+          this.materials.chassisBlack
+        );
+        dividerLeft.position.set(-9.15, dividerY / 2, dividerZ);
+        dividerLeft.castShadow = true;
+        dividerLeft.receiveShadow = true;
+        this.group.add(dividerLeft);
+
+        // Sisi kanan dinding pembatas (x = +10.5 s.d. +19.8 -> lebar 9.3, pusat x = +15.15)
+        const dividerRight = new THREE.Mesh(
+          new THREE.BoxGeometry(9.3, dividerY, dividerThick),
+          this.materials.chassisBlack
+        );
+        dividerRight.position.set(15.15, dividerY / 2, dividerZ);
+        dividerRight.castShadow = true;
+        dividerRight.receiveShadow = true;
+        this.group.add(dividerRight);
+
+        // Ambang atas lubang jalur kabel (x = +1.5 s.d. +10.5 -> lebar 9.0, pusat x = +6.0, celah bawah tinggi 3.8)
+        const passThroughTopBar = new THREE.Mesh(
+          new THREE.BoxGeometry(9.0, dividerY - 3.8, dividerThick),
+          this.materials.chassisBlack
+        );
+        passThroughTopBar.position.set(6.0, 3.8 + (dividerY - 3.8) / 2, dividerZ);
+        passThroughTopBar.castShadow = true;
+        this.group.add(passThroughTopBar);
+      }
+
+      _buildRearPanelAndPSUBracket() {
+        const { widthX, heightY, depthZ } = this.dimensions;
+        const rearX = -widthX / 2 + 0.22;
+
+        // 1. Dinding belakang bagian atas (-Z) di atas bukaan Rear I/O
+        const rearCornerTop = new THREE.Mesh(new THREE.BoxGeometry(0.45, heightY, 4.7), this.materials.chassisDark);
+        rearCornerTop.position.set(rearX, heightY / 2, -depthZ / 2 + 2.35); // z: -21.5 s.d. -16.8
+        this.group.add(rearCornerTop);
+
+        const rearAboveIO = new THREE.Mesh(new THREE.BoxGeometry(0.45, heightY - 6.0, 9.6), this.materials.chassisDark);
+        rearAboveIO.position.set(rearX, 6.0 + (heightY - 6.0) / 2, -12.0); // z: -16.8 s.d. -7.2
+        this.group.add(rearAboveIO);
+
+        const rearBelowIO = new THREE.Mesh(new THREE.BoxGeometry(0.45, 2.4, 9.6), this.materials.chassisDark);
+        rearBelowIO.position.set(rearX, 1.2, -12.0);
+        this.group.add(rearBelowIO);
+
+        // 2. Dinding belakang tengah (menutup penuh dari z = -7.2 hingga batas bukaan PSU z = 11.6)
+        const rearMid = new THREE.Mesh(new THREE.BoxGeometry(0.45, heightY, 18.8), this.materials.chassisDark);
+        rearMid.position.set(rearX, heightY / 2, 2.2); // z: -7.2 s.d. +11.6
+        rearMid.castShadow = true;
+        rearMid.receiveShadow = true;
+        this.group.add(rearMid);
+
+        // 3. Dinding belakang penutup area atas & sudut bawah ruang PSU (sehingga hanya bukaan PSU yang terbuka)
+        const rearAbovePSU = new THREE.Mesh(new THREE.BoxGeometry(0.45, heightY - 5.65, 9.9), this.materials.chassisDark);
+        rearAbovePSU.position.set(rearX, 5.65 + (heightY - 5.65) / 2, 16.55); // z: +11.6 s.d. +21.5
+        rearAbovePSU.castShadow = true;
+        this.group.add(rearAbovePSU);
+
+        const rearCornerBot = new THREE.Mesh(new THREE.BoxGeometry(0.45, 5.65, 1.1), this.materials.chassisDark);
+        rearCornerBot.position.set(rearX, 5.65 / 2, depthZ / 2 - 0.55); // z: +20.4 s.d. +21.5
+        this.group.add(rearCornerBot);
+
+        // Braket Mounting PSU Belakang + 4 Baut Terpasang (tepat pada bukaan z: 11.6 s.d. 20.4)
+        const psuCenterY = this.anchors.psu.y + 2.6;
+        const psuCenterZ = this.anchors.psu.z;
+        const bracketX = -widthX / 2 - 0.06;
+
+        const frameTop = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.45, 9.2), this.materials.chromeSteel);
+        frameTop.position.set(bracketX, psuCenterY + 2.65, psuCenterZ);
+        const frameBot = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.45, 9.2), this.materials.chromeSteel);
+        frameBot.position.set(bracketX, psuCenterY - 2.65, psuCenterZ);
+        const frameLeft = new THREE.Mesh(new THREE.BoxGeometry(0.24, 5.7, 0.45), this.materials.chromeSteel);
+        frameLeft.position.set(bracketX, psuCenterY, psuCenterZ - 4.4);
+        const frameRight = new THREE.Mesh(new THREE.BoxGeometry(0.24, 5.7, 0.45), this.materials.chromeSteel);
+        frameRight.position.set(bracketX, psuCenterY, psuCenterZ + 4.4);
+        this.group.add(frameTop, frameBot, frameLeft, frameRight);
+
+        [
+          [psuCenterY + 2.05, psuCenterZ - 3.85],
+          [psuCenterY + 2.05, psuCenterZ + 3.85],
+          [psuCenterY - 2.05, psuCenterZ - 3.85],
+          [psuCenterY - 2.05, psuCenterZ + 3.85]
+        ].forEach(([sy, sz]) => {
+          const earTab = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.95, 0.95), this.materials.chromeSteel);
+          earTab.position.set(bracketX, sy, sz);
+          const screwHead = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.18, 16), this.materials.chromeSteel);
+          screwHead.rotation.z = Math.PI / 2;
+          screwHead.position.set(bracketX - 0.18, sy, sz);
+          this.group.add(earTab, screwHead);
+        });
+      }
+
+      _buildInstalledPSU() {
+        const psuGroup = new THREE.Group();
+        psuGroup.position.copy(this.anchors.psu);
+
+        const lengthX = 12.2;
+        const heightY = 5.2;
+        const depthZ = 8.8;
+
+        const bodyMat = new THREE.MeshStandardMaterial({ color: '#111827', roughness: 0.42, metalness: 0.75 });
+        const stickerTex = ProceduralTextures.createPSUStickerTexture();
+        const stickerMat = new THREE.MeshStandardMaterial({ map: stickerTex, roughness: 0.35, metalness: 0.25 });
+
+        const mainBody = new THREE.Mesh(new THREE.BoxGeometry(lengthX, heightY, depthZ), bodyMat);
+        mainBody.position.y = heightY / 2;
+        mainBody.castShadow = true;
+        psuGroup.add(mainBody);
+
+        // Permukaan atas PSU (+Y) bersih tanpa detail kipas, hanya pelat spesifikasi RM850x SHIFT
+        const topY = heightY + 0.02;
+        const topLabelPlane = new THREE.Mesh(new THREE.PlaneGeometry(8.2, depthZ - 1.2), stickerMat);
+        topLabelPlane.rotation.x = -Math.PI / 2;
+        topLabelPlane.rotation.z = Math.PI / 2;
+        topLabelPlane.position.set(0.2, topY, 0);
+        psuGroup.add(topLabelPlane);
+
+        // Panel Saklar AC di belakang PSU (-X)
+        const rearX = -lengthX / 2 - 0.02;
+        const acHousing = new THREE.Mesh(new THREE.BoxGeometry(0.28, 1.35, 2.1), new THREE.MeshStandardMaterial({ color: '#090d14' }));
+        acHousing.position.set(rearX, 1.85, -2.1);
+        const rockerBtn = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.85, 0.58), new THREE.MeshStandardMaterial({ color: '#ef4444' }));
+        rockerBtn.position.set(rearX - 0.05, 1.85, 0.2);
+        psuGroup.add(acHousing, rockerBtn);
+
+        // Port Output Modular di sisi kanan PSU (+X) tempat pangkal kabel terhubung langsung
+        const frontX = lengthX / 2;
+        const plugMat = new THREE.MeshStandardMaterial({ color: '#18181b', roughness: 0.45 });
+        const accentMat = new THREE.MeshStandardMaterial({ color: '#facc15', roughness: 0.35 });
+
+        const pCpu = new THREE.Mesh(new THREE.BoxGeometry(0.75, 1.05, 2.2), plugMat);
+        pCpu.position.set(frontX + 0.32, 1.45, -1.6);
+        const pCpuClip = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.16, 1.9), accentMat);
+        pCpuClip.position.set(frontX + 0.32, 2.02, -1.6);
+
+        const p24 = new THREE.Mesh(new THREE.BoxGeometry(0.75, 1.15, 3.6), plugMat);
+        p24.position.set(frontX + 0.32, 1.45, 1.7);
+        const p24Clip = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.16, 3.2), accentMat);
+        p24Clip.position.set(frontX + 0.32, 2.08, 1.7);
+
+        psuGroup.add(pCpu, pCpuClip, p24, p24Clip);
+        this.group.add(psuGroup);
+      }
+
+      _buildCableRoutingGrommets() {
+        // 1. Bingkai Rubber Grommet pada Lubang Jalur Kabel Khusus (Ruang PSU -> Ruang Motherboard)
+        const passThroughFrame = new THREE.Group();
+        passThroughFrame.position.set(6.0, 2.1, 11.1);
+
+        const grommetTop = new THREE.Mesh(new THREE.BoxGeometry(9.2, 0.24, 0.64), this.materials.rubberGrommet);
+        grommetTop.position.set(0, 1.72, 0);
+        const grommetBot = new THREE.Mesh(new THREE.BoxGeometry(9.2, 0.24, 0.64), this.materials.rubberGrommet);
+        grommetBot.position.set(0, -1.62, 0);
+        const grommetLeft = new THREE.Mesh(new THREE.BoxGeometry(0.26, 3.5, 0.64), this.materials.rubberGrommet);
+        grommetLeft.position.set(-4.48, 0.05, 0);
+        const grommetRight = new THREE.Mesh(new THREE.BoxGeometry(0.26, 3.5, 0.64), this.materials.rubberGrommet);
+        grommetRight.position.set(4.48, 0.05, 0);
+
+        passThroughFrame.add(grommetTop, grommetBot, grommetLeft, grommetRight);
+        this.group.add(passThroughFrame);
+
+        // 2. Karet Grommet Manajemen Kabel di dekat slot ATX 24-pin
+        const grommetAtx = new THREE.Mesh(
+          new THREE.BoxGeometry(1.4, 0.36, 5.2),
+          this.materials.rubberGrommet
+        );
+        grommetAtx.position.set(11.2, 2.18, -10.0);
+        this.group.add(grommetAtx);
+
+        // 3. Karet Grommet Manajemen Kabel di dekat slot CPU 8-pin
+        const grommetCpu = new THREE.Mesh(
+          new THREE.BoxGeometry(3.4, 0.36, 1.3),
+          this.materials.rubberGrommet
+        );
+        grommetCpu.position.set(-9.0, 2.18, -20.0);
+        this.group.add(grommetCpu);
+      }
+
+      update() {
+        this.materials.ledStrip.emissiveIntensity = this.isSystemPowered ? 0.95 : 0.22;
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 5. BUNDEL KABEL FISIK MULTI-STRAND (INSTANCEDMESH + CABLE COMBS + KONEKTOR)
+     *    - Pangkal terhubung langsung ke port modular PSU di dalam kompartemen PSU
+     *    - Posisi awal tersusun rapi sepenuhnya di dalam ruang PSU casing
+     *    - Masuk ke ruang motherboard melewati lubang jalur kabel khusus (pass-through)
+     * ============================================================================
+     */
+    class MultiStrandPowerCable3D {
+      constructor(config) {
+        this.key = config.key; // 'atx24' | 'cpu8'
+        this.psuPortWorld = config.psuPortWorld.clone();
+        this.psuSlackWorld = config.psuSlackWorld.clone();
+        this.passThroughWorld = config.passThroughWorld.clone();
+        this.stagingWorld = config.stagingWorld.clone();
+        this.stagingEuler = config.stagingEuler.clone();
+        this.targetWorld = config.targetWorld.clone();
+        this.routedWaypoints = config.routedWaypoints.map((v) => v.clone());
+
+        this.cols = config.cols;
+        this.rows = config.rows;
+        this.strandCount = this.cols * this.rows;
+        this.strandRadius = config.strandRadius;
+        this.strandSpacing = config.strandSpacing;
+
+        this.group = new THREE.Group();
+        this.group.name = `MultiStrandCable_${this.key}`;
+
+        this.draggableMeshes = [];
+        this.isConnected = false;
+        this.isDragging = false;
+
+        this.targetPlugPos = this.stagingWorld.clone();
+        this.targetPlugEuler = this.stagingEuler.clone();
+
+        this._buildConnectorHead(config);
+        this._initMultiStrandInstancedMesh();
+        this._initCableCombs();
+        this.updateBundleGeometry();
+      }
+
+      _buildConnectorHead(config) {
+        const housingMat = new THREE.MeshStandardMaterial({
+          color: '#141821',
+          roughness: 0.42,
+          metalness: 0.18
+        });
+        const clipMat = new THREE.MeshStandardMaterial({
+          color: '#262d3d',
+          roughness: 0.35,
+          metalness: 0.35
+        });
+        const brassPinMat = new THREE.MeshStandardMaterial({
+          color: '#f59e0b',
+          roughness: 0.25,
+          metalness: 0.92
+        });
+        const labelTex = ProceduralTextures.createConnectorLabelTexture(config.labelText, config.accentHex);
+        const labelMat = new THREE.MeshStandardMaterial({
+          map: labelTex,
+          roughness: 0.35
+        });
+
+        this.plugGroup = new THREE.Group();
+        this.plugGroup.position.copy(this.stagingWorld);
+        this.plugGroup.rotation.copy(this.stagingEuler);
+
+        if (this.key === 'atx24') {
+          // ==================================================================
+          // KONEKTOR ATX 24-PIN (20+4 PIN PANJANG + 24 KONTAK + KLIP SAMPING)
+          // ==================================================================
+          const w = 1.24;
+          const h = 1.15;
+          const l20 = 4.35;
+          const l4 = 0.88;
+
+          const block20 = new THREE.Mesh(new THREE.BoxGeometry(w, h, l20), housingMat);
+          block20.position.set(0, h / 2, -0.46);
+          block20.castShadow = true;
+
+          const block4 = new THREE.Mesh(new THREE.BoxGeometry(w, h, l4), housingMat);
+          block4.position.set(0, h / 2, 2.20);
+          block4.castShadow = true;
+
+          // Pelat Label "ATX 24-PIN" di punggung atas & sisi samping agar terbaca jelas dari POV atas
+          const topLabel = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 3.6), labelMat);
+          topLabel.rotation.x = -Math.PI / 2;
+          topLabel.rotation.z = Math.PI / 2;
+          topLabel.position.set(0, h + 0.015, -0.45);
+
+          const sideLabel = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 0.72), labelMat);
+          sideLabel.rotation.y = Math.PI / 2;
+          sideLabel.position.set(w / 2 + 0.015, h * 0.5, -0.45);
+
+          for (let r = 0; r < 12; r++) {
+            const pz = -2.35 + r * 0.42 + (r >= 10 ? 0.12 : 0);
+            for (let c = 0; c < 2; c++) {
+              const px = -0.26 + c * 0.52;
+              const terminal = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.22), brassPinMat);
+              terminal.position.set(px, 0.04, pz);
+              this.plugGroup.add(terminal);
+            }
+          }
+
+          this.lockingClip = new THREE.Group();
+          this.lockingClip.position.set(w / 2 + 0.06, h * 0.55, -0.35);
+
+          const clipArm = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.92, 1.32), clipMat);
+          const clipThumbTab = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.18, 1.32), clipMat);
+          clipThumbTab.position.set(0.06, 0.42, 0);
+          const clipHook = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.14, 1.25), clipMat);
+          clipHook.position.set(-0.04, -0.42, 0);
+
+          this.lockingClip.add(clipArm, clipThumbTab, clipHook);
+          this.plugGroup.add(block20, block4, topLabel, sideLabel, this.lockingClip);
+
+          const hitbox = new THREE.Mesh(
+            new THREE.BoxGeometry(w + 1.6, h + 1.8, 6.4),
+            new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.0, depthWrite: false })
+          );
+          hitbox.position.set(0, h / 2, 0);
+          hitbox.userData.cableKey = this.key;
+          this.plugGroup.add(hitbox);
+
+          this.selectionBox = new THREE.LineSegments(
+            new THREE.EdgesGeometry(new THREE.BoxGeometry(w + 0.55, h + 0.55, 5.7)),
+            new THREE.LineBasicMaterial({ color: '#facc15', transparent: true, opacity: 0.95 })
+          );
+          this.selectionBox.position.set(0, h / 2, 0);
+          this.plugGroup.add(this.selectionBox);
+
+          this.draggableMeshes.push(block20, block4, hitbox);
+        } else {
+          // ==================================================================
+          // KONEKTOR CPU EPS 8-PIN (4+4 PIN TERBELAH + 8 KONTAK + KLIP ATAS)
+          // ==================================================================
+          const halfW = 0.96;
+          const h = 1.15;
+          const d = 1.24;
+
+          const blockLeft4 = new THREE.Mesh(new THREE.BoxGeometry(halfW, h, d), housingMat);
+          blockLeft4.position.set(-0.54, h / 2, 0);
+          blockLeft4.castShadow = true;
+
+          const blockRight4 = new THREE.Mesh(new THREE.BoxGeometry(halfW, h, d), housingMat);
+          blockRight4.position.set(0.54, h / 2, 0);
+          blockRight4.castShadow = true;
+
+          const topLabel = new THREE.Mesh(new THREE.PlaneGeometry(1.75, 0.85), labelMat);
+          topLabel.rotation.x = -Math.PI / 2;
+          topLabel.position.set(0, h + 0.015, 0);
+
+          const frontLabel = new THREE.Mesh(new THREE.PlaneGeometry(1.75, 0.72), labelMat);
+          frontLabel.position.set(0, h * 0.5, d / 2 + 0.015);
+
+          for (let c = 0; c < 4; c++) {
+            const px = -0.74 + c * 0.46 + (c >= 2 ? 0.08 : 0);
+            for (let r = 0; r < 2; r++) {
+              const pz = -0.26 + r * 0.52;
+              const terminal = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.16, 0.24), brassPinMat);
+              terminal.position.set(px, 0.04, pz);
+              this.plugGroup.add(terminal);
+            }
+          }
+
+          this.lockingClip = new THREE.Group();
+          this.lockingClip.position.set(0, h * 0.55, -d / 2 - 0.06);
+
+          const clipArm = new THREE.Mesh(new THREE.BoxGeometry(0.96, 0.92, 0.14), clipMat);
+          const clipThumbTab = new THREE.Mesh(new THREE.BoxGeometry(0.96, 0.18, 0.24), clipMat);
+          clipThumbTab.position.set(0, 0.42, -0.06);
+          const clipHook = new THREE.Mesh(new THREE.BoxGeometry(0.90, 0.14, 0.18), clipMat);
+          clipHook.position.set(0, -0.42, 0.04);
+
+          this.lockingClip.add(clipArm, clipThumbTab, clipHook);
+          this.plugGroup.add(blockLeft4, blockRight4, topLabel, frontLabel, this.lockingClip);
+
+          const hitbox = new THREE.Mesh(
+            new THREE.BoxGeometry(3.0, h + 1.8, d + 1.6),
+            new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.0, depthWrite: false })
+          );
+          hitbox.position.set(0, h / 2, 0);
+          hitbox.userData.cableKey = this.key;
+          this.plugGroup.add(hitbox);
+
+          this.selectionBox = new THREE.LineSegments(
+            new THREE.EdgesGeometry(new THREE.BoxGeometry(2.45, h + 0.55, d + 0.55)),
+            new THREE.LineBasicMaterial({ color: '#facc15', transparent: true, opacity: 0.95 })
+          );
+          this.selectionBox.position.set(0, h / 2, 0);
+          this.plugGroup.add(this.selectionBox);
+
+          this.draggableMeshes.push(blockLeft4, blockRight4, hitbox);
+        }
+
+        this.group.add(this.plugGroup);
+      }
+
+      _initMultiStrandInstancedMesh() {
+        this.segmentsPerStrand = 26;
+        const totalInstances = this.strandCount * this.segmentsPerStrand;
+
+        const segGeo = new THREE.CylinderGeometry(this.strandRadius, this.strandRadius, 1.0, 7, 1, true);
+        segGeo.translate(0, 0.5, 0);
+
+        const strandMat = new THREE.MeshStandardMaterial({
+          color: '#1b2230',
+          roughness: 0.48,
+          metalness: 0.22
+        });
+
+        this.strandInstancedMesh = new THREE.InstancedMesh(segGeo, strandMat, totalInstances);
+        this.strandInstancedMesh.castShadow = true;
+        this.strandInstancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+
+        const cDark = new THREE.Color('#141923');
+        const cSlate = new THREE.Color('#273244');
+        const cAccent = new THREE.Color('#334155');
+        for (let s = 0; s < this.strandCount; s++) {
+          const col = (s % 4 === 0) ? cSlate : (s % 7 === 0 ? cAccent : cDark);
+          for (let seg = 0; seg < this.segmentsPerStrand; seg++) {
+            this.strandInstancedMesh.setColorAt(s * this.segmentsPerStrand + seg, col);
+          }
+        }
+        if (this.strandInstancedMesh.instanceColor) {
+          this.strandInstancedMesh.instanceColor.needsUpdate = true;
+        }
+
+        this.group.add(this.strandInstancedMesh);
+        this._dummyMatrix = new THREE.Matrix4();
+        this._dummyPos = new THREE.Vector3();
+        this._dummyQuat = new THREE.Quaternion();
+        this._dummyScale = new THREE.Vector3();
+        this._upVec = new THREE.Vector3(0, 1, 0);
+        this._dirVec = new THREE.Vector3();
+      }
+
+      _initCableCombs() {
+        const combMat = new THREE.MeshStandardMaterial({
+          color: '#090d16',
+          roughness: 0.35,
+          metalness: 0.4
+        });
+        this.cableCombs = [];
+
+        const combW = this.key === 'atx24' ? 1.15 : 1.95;
+        const combH = 0.24;
+        const combD = this.key === 'atx24' ? 5.15 : 1.15;
+
+        for (let i = 0; i < 3; i++) {
+          const comb = new THREE.Mesh(new THREE.BoxGeometry(combW, combH, combD), combMat);
+          comb.castShadow = true;
+          this.group.add(comb);
+          this.cableCombs.push(comb);
+        }
+      }
+
+      setHighlight(active, boostSec = 0, elapsedSec = 0) {
+        this.selectionBox.visible = active && !this.isConnected;
+        if (this.selectionBox.visible) {
+          const pulse = 1.0 + Math.sin(elapsedSec * (boostSec > 0 ? 13.5 : 7.5)) * (boostSec > 0 ? 0.10 : 0.05);
+          this.selectionBox.scale.set(pulse, pulse, pulse);
+        }
+      }
+
+      reset() {
+        this.isConnected = false;
+        this.isDragging = false;
+        this.targetPlugPos.copy(this.stagingWorld);
+        this.targetPlugEuler.copy(this.stagingEuler);
+        this.plugGroup.position.copy(this.stagingWorld);
+        this.plugGroup.rotation.copy(this.stagingEuler);
+        if (this.lockingClip) {
+          this.lockingClip.rotation.set(0, 0, 0);
+        }
+        this.plugGroup.updateMatrixWorld(true);
+        this.updateBundleGeometry();
+      }
+
+      updateBundleGeometry() {
+        // Titik ujung atas kepala konektor (tempat masuknya helai kabel)
+        const plugTopLocal = new THREE.Vector3(0, 1.12, 0);
+        const plugTopWorld = plugTopLocal.applyMatrix4(this.plugGroup.matrixWorld);
+
+        let controlPoints = [];
+
+        if (!this.isConnected && !this.isDragging) {
+          // Kondisi awal rapi sepenuhnya di dalam ruang PSU casing:
+          // Pangkal di port modular PSU -> melengkung halus di lantai kompartemen PSU -> ujung konektor siap di dekat lubang pass-through
+          const midChamberPt = new THREE.Vector3(
+            THREE.MathUtils.lerp(this.psuSlackWorld.x, plugTopWorld.x, 0.55),
+            0.95,
+            THREE.MathUtils.lerp(this.psuSlackWorld.z, plugTopWorld.z, 0.55)
+          );
+          controlPoints = [
+            this.psuPortWorld,
+            this.psuSlackWorld,
+            midChamberPt,
+            plugTopWorld
+          ];
+        } else if (this.isDragging) {
+          // Saat ditarik pengguna: keluar dari port PSU -> melewati lubang jalur kabel pass-through -> melengkung di atas motherboard menuju kursor
+          const arcLift = new THREE.Vector3(
+            THREE.MathUtils.lerp(this.passThroughWorld.x, plugTopWorld.x, 0.5),
+            Math.max(8.8, plugTopWorld.y + 3.0),
+            THREE.MathUtils.lerp(this.passThroughWorld.z, plugTopWorld.z, 0.5)
+          );
+          controlPoints = [
+            this.psuPortWorld,
+            this.psuSlackWorld,
+            this.passThroughWorld,
+            arcLift,
+            plugTopWorld
+          ];
+        } else {
+          // Setelah terpasang di motherboard: jalur manajemen kabel internal rapi dari PSU -> lubang pass-through -> menyusuri sisi dalam casing -> slot motherboard
+          controlPoints = [
+            this.psuPortWorld,
+            this.psuSlackWorld,
+            this.passThroughWorld,
+            ...this.routedWaypoints,
+            plugTopWorld
+          ];
+        }
+
+        const centerCurve = new THREE.CatmullRomCurve3(controlPoints);
+        const curvePoints = centerCurve.getSpacedPoints(this.segmentsPerStrand);
+
+        const tangent = new THREE.Vector3();
+        const sideAxis = new THREE.Vector3();
+        const altAxis = new THREE.Vector3();
+        const pA = new THREE.Vector3();
+        const pB = new THREE.Vector3();
+
+        const frameSide = [];
+        const frameAlt = [];
+        const plugLocalZ = new THREE.Vector3(0, 0, 1).applyQuaternion(this.plugGroup.quaternion);
+        const plugLocalX = new THREE.Vector3(1, 0, 0).applyQuaternion(this.plugGroup.quaternion);
+
+        for (let i = 0; i <= this.segmentsPerStrand; i++) {
+          const prev = curvePoints[Math.max(0, i - 1)];
+          const next = curvePoints[Math.min(this.segmentsPerStrand, i + 1)];
+          tangent.subVectors(next, prev).normalize();
+
+          const blend = i / this.segmentsPerStrand;
+          if (this.key === 'atx24') {
+            sideAxis.set(0, 0, 1).lerp(plugLocalZ, blend).normalize();
+            altAxis.crossVectors(tangent, sideAxis).normalize();
+            if (altAxis.lengthSq() < 0.001) altAxis.copy(plugLocalX);
+            sideAxis.crossVectors(altAxis, tangent).normalize();
+          } else {
+            sideAxis.set(1, 0, 0).lerp(plugLocalX, blend).normalize();
+            altAxis.crossVectors(tangent, sideAxis).normalize();
+            if (altAxis.lengthSq() < 0.001) altAxis.copy(plugLocalZ);
+            sideAxis.crossVectors(altAxis, tangent).normalize();
+          }
+          frameSide.push(sideAxis.clone());
+          frameAlt.push(altAxis.clone());
+        }
+
+        let instanceIdx = 0;
+        for (let r = 0; r < this.rows; r++) {
+          const offsetSide = (r - (this.rows - 1) / 2) * this.strandSpacing;
+          for (let c = 0; c < this.cols; c++) {
+            const offsetAlt = (c - (this.cols - 1) / 2) * this.strandSpacing;
+
+            for (let seg = 0; seg < this.segmentsPerStrand; seg++) {
+              const t0 = seg / this.segmentsPerStrand;
+              const t1 = (seg + 1) / this.segmentsPerStrand;
+              const spread0 = 0.65 + 0.35 * t0;
+              const spread1 = 0.65 + 0.35 * t1;
+
+              pA.copy(curvePoints[seg])
+                .addScaledVector(frameSide[seg], offsetSide * spread0)
+                .addScaledVector(frameAlt[seg], offsetAlt * spread0);
+
+              pB.copy(curvePoints[seg + 1])
+                .addScaledVector(frameSide[seg + 1], offsetSide * spread1)
+                .addScaledVector(frameAlt[seg + 1], offsetAlt * spread1);
+
+              this._dirVec.subVectors(pB, pA);
+              const segLen = this._dirVec.length();
+              if (segLen > 0.0001) {
+                this._dirVec.divideScalar(segLen);
+                this._dummyQuat.setFromUnitVectors(this._upVec, this._dirVec);
+              }
+              this._dummyScale.set(1, segLen + 0.04, 1);
+              this._dummyMatrix.compose(pA, this._dummyQuat, this._dummyScale);
+              this.strandInstancedMesh.setMatrixAt(instanceIdx++, this._dummyMatrix);
+            }
+          }
+        }
+        this.strandInstancedMesh.instanceMatrix.needsUpdate = true;
+
+        // Tempatkan 3 Sisir Kabel (Cable Combs) di sepanjang bentangan kabel
+        const combIndices = [
+          Math.floor(this.segmentsPerStrand * 0.45),
+          Math.floor(this.segmentsPerStrand * 0.68),
+          Math.floor(this.segmentsPerStrand * 0.88)
+        ];
+        combIndices.forEach((ptIdx, idx) => {
+          const comb = this.cableCombs[idx];
+          comb.position.copy(curvePoints[ptIdx]);
+          const prev = curvePoints[Math.max(0, ptIdx - 1)];
+          const next = curvePoints[Math.min(this.segmentsPerStrand, ptIdx + 1)];
+          tangent.subVectors(next, prev).normalize();
+          this._dummyQuat.setFromUnitVectors(this._upVec, tangent);
+          comb.quaternion.copy(this._dummyQuat);
+        });
+      }
+
+      update(dt) {
+        const lerpFactor = Math.min(1, dt * 15);
+        const prevPos = this.plugGroup.position.clone();
+        const prevRotX = this.plugGroup.rotation.x;
+        const prevRotY = this.plugGroup.rotation.y;
+        const prevRotZ = this.plugGroup.rotation.z;
+
+        this.plugGroup.position.lerp(this.targetPlugPos, lerpFactor);
+        this.plugGroup.rotation.x += (this.targetPlugEuler.x - this.plugGroup.rotation.x) * lerpFactor;
+        this.plugGroup.rotation.y += (this.targetPlugEuler.y - this.plugGroup.rotation.y) * lerpFactor;
+        this.plugGroup.rotation.z += (this.targetPlugEuler.z - this.plugGroup.rotation.z) * lerpFactor;
+
+        if (this.lockingClip) {
+          if (this.isConnected) {
+            if (this.key === 'atx24') {
+              this.lockingClip.rotation.z += (-0.08 - this.lockingClip.rotation.z) * lerpFactor;
+            } else {
+              this.lockingClip.rotation.x += (-0.08 - this.lockingClip.rotation.x) * lerpFactor;
+            }
+          } else if (this.isDragging) {
+            if (this.key === 'atx24') {
+              this.lockingClip.rotation.z += (0.14 - this.lockingClip.rotation.z) * lerpFactor;
+            } else {
+              this.lockingClip.rotation.x += (0.14 - this.lockingClip.rotation.x) * lerpFactor;
+            }
+          } else {
+            this.lockingClip.rotation.set(0, 0, 0);
+          }
+        }
+
+        const moved =
+          prevPos.distanceToSquared(this.plugGroup.position) > 0.00001 ||
+          Math.abs(this.plugGroup.rotation.x - prevRotX) > 0.0005 ||
+          Math.abs(this.plugGroup.rotation.y - prevRotY) > 0.0005 ||
+          Math.abs(this.plugGroup.rotation.z - prevRotZ) > 0.0005;
+
+        if (moved) {
+          this.plugGroup.updateMatrixWorld(true);
+          this.updateBundleGeometry();
+        }
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 6. INISIALISASI SCENE, KAMERA POV HALUS & INTERAKSI DRAG-AND-DROP
+     * ============================================================================
+     */
+    function initSimulation() {
+      const container = document.getElementById('canvas-container');
+      if (!container) return;
+
+      if (typeof THREE === 'undefined') {
+        container.innerHTML = '<div class="flex items-center justify-center h-full p-6 text-center text-xs text-amber-300">Gagal memuat pustaka 3D (Three.js). Periksa koneksi internet lalu muat ulang halaman.</div>';
+        return;
+      }
+
+      try {
+        const getViewportSize = () => {
+          const rect = container.getBoundingClientRect();
+          const w = Math.max(10, Math.round(rect.width || container.clientWidth || window.innerWidth || 800));
+          const h = Math.max(10, Math.round(rect.height || container.clientHeight || window.innerHeight || 600));
+          return { w, h };
+        };
+
+        const initialSize = getViewportSize();
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color('#090d16');
+
+        const camera = new THREE.PerspectiveCamera(42, initialSize.w / initialSize.h, 0.1, 300);
+
+        const renderer = new THREE.WebGLRenderer({
+          antialias: true,
+          preserveDrawingBuffer: true,
+          powerPreference: 'high-performance'
+        });
+        renderer.setSize(initialSize.w, initialSize.h, false);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        container.innerHTML = '';
+        container.appendChild(renderer.domElement);
+
+        // Pencahayaan Studio Bengkel Teknisi
+        const hemiLight = new THREE.HemisphereLight('#f1f5f9', '#1e293b', 0.98);
+        hemiLight.position.set(0, 52, 0);
+        scene.add(hemiLight);
+
+        const dirLight = new THREE.DirectionalLight('#ffffff', 1.22);
+        dirLight.position.set(22, 50, 28);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.near = 2;
+        dirLight.shadow.camera.far = 140;
+        const shadowBound = 48;
+        dirLight.shadow.camera.left = -shadowBound;
+        dirLight.shadow.camera.right = shadowBound;
+        dirLight.shadow.camera.top = shadowBound;
+        dirLight.shadow.camera.bottom = -shadowBound;
+        dirLight.shadow.bias = -0.0005;
+        scene.add(dirLight);
+
+        const rimLight = new THREE.DirectionalLight('#38bdf8', 0.45);
+        rimLight.position.set(-34, 26, -28);
+        scene.add(rimLight);
+
+        // 1. Meja Kerja Teknisi + Matras ESD
+        const workbench = new WorkbenchTable3D();
+        scene.add(workbench.group);
+
+        // 2. Casing Komputer Tertidur Rata di Tengah Meja: caseWorldPos = (2.5, -0.31, -3.5)
+        const caseWorldPos = new THREE.Vector3(2.5, -0.31, -3.5);
+        const pcCase = new PCCasing3D();
+        pcCase.group.position.copy(caseWorldPos);
+        scene.add(pcCase.group);
+
+        // 3. Motherboard Intel ATX-Z790 Master Terpasang Lengkap di Tray Casing
+        const mbWorldPos = new THREE.Vector3(
+          caseWorldPos.x + pcCase.anchors.motherboard.x,
+          caseWorldPos.y + pcCase.anchors.motherboard.y,
+          caseWorldPos.z + pcCase.anchors.motherboard.z
+        );
+        const motherboard = new MotherboardComplete3D();
+        motherboard.group.position.copy(mbWorldPos);
+        scene.add(motherboard.group);
+
+        // Koordinat Dunia PSU
+        const psuWorldPos = new THREE.Vector3(
+          caseWorldPos.x + pcCase.anchors.psu.x,
+          caseWorldPos.y + pcCase.anchors.psu.y,
+          caseWorldPos.z + pcCase.anchors.psu.z
+        );
+
+        const getPortWorld = (portKey) => mbWorldPos.clone().add(motherboard.anchors.ports[portKey]);
+        const pAtx = getPortWorld('atx24');
+        const pCpu = getPortWorld('cpu8');
+
+        // ====================================================================
+        // 4. DUA KABEL DAYA PSU TERSUSUN RAPI DI DALAM RUANG PSU CASING
+        //    - Terhubung langsung ke port output modular PSU
+        //    - Mengalir melewati lubang pass-through di dinding pembatas ke ruang motherboard
+        // ====================================================================
+        const cpuCable = new MultiStrandPowerCable3D({
+          key: 'cpu8',
+          labelText: 'CPU 4+4',
+          accentHex: '#38bdf8',
+          // Pangkal terhubung langsung ke port modular CPU 8-Pin pada PSU
+          psuPortWorld: new THREE.Vector3(psuWorldPos.x + 6.4, psuWorldPos.y + 1.45, psuWorldPos.z - 1.6),
+          // Lengkungan kabel rapi di dalam kompartemen PSU
+          psuSlackWorld: new THREE.Vector3(caseWorldPos.x - 3.6, 1.35, caseWorldPos.z + 13.4),
+          // Titik melewati lubang jalur kabel khusus (pass-through grommet kiri)
+          passThroughWorld: new THREE.Vector3(caseWorldPos.x + 4.2, 2.05, caseWorldPos.z + 11.1),
+          // Posisi awal di dalam kompartemen PSU: dirotasi +90° sumbu Z agar bagian belakang konektor menghadap langsung ke kabel dari PSU (-X)
+          stagingWorld: new THREE.Vector3(caseWorldPos.x + 4.2, 10, caseWorldPos.z + 13.4),
+          stagingEuler: new THREE.Euler(0, 0, Math.PI / 2),
+          targetWorld: pCpu,
+          // Jalur manajemen kabel internal setelah terpasang ke slot CPU_PWR 8-PIN atas motherboard
+          routedWaypoints: [
+            new THREE.Vector3(caseWorldPos.x + 12.2, 3.2, caseWorldPos.z + 7.5),
+            new THREE.Vector3(caseWorldPos.x + 14.8, 4.8, caseWorldPos.z - 8.5),
+            new THREE.Vector3(caseWorldPos.x + 9.5, 6.2, caseWorldPos.z - 19.6),
+            new THREE.Vector3(pCpu.x + 1.5, pCpu.y + 4.0, pCpu.z - 0.6)
+          ],
+          cols: 4,
+          rows: 2,
+          strandRadius: 0.165,
+          strandSpacing: 0.45
+        });
+        const atxCable = new MultiStrandPowerCable3D({
+          key: 'atx24',
+          labelText: 'ATX 24-PIN',
+          accentHex: '#facc15',
+          // Pangkal terhubung langsung ke port modular ATX 24-Pin pada PSU
+          psuPortWorld: new THREE.Vector3(psuWorldPos.x + 6.4, psuWorldPos.y + 1.45, psuWorldPos.z + 1.7),
+          // Lengkungan kabel rapi di dalam kompartemen PSU berdampingan dengan kabel CPU 8-pin
+          psuSlackWorld: new THREE.Vector3(caseWorldPos.x - 3.6, 1.12, caseWorldPos.z + 17.6),
+          // Titik melewati lubang jalur kabel khusus (pass-through grommet kanan)
+          passThroughWorld: new THREE.Vector3(caseWorldPos.x + 7.8, 2.05, caseWorldPos.z + 11.1),
+          // Posisi awal di dalam kompartemen PSU: dirotasi +90° sumbu Z agar sisi masuk 24 helai kabel menyatu sejajar dengan bundel kabel dari PSU (-X)
+          stagingWorld: new THREE.Vector3(caseWorldPos.x + 5.2, 10.10, caseWorldPos.z + 17.6),
+          stagingEuler: new THREE.Euler(0, 0, Math.PI / 2),
+          targetWorld: pAtx,
+          // Jalur manajemen kabel internal setelah terpasang ke slot ATX_PWR 24-PIN kanan motherboard
+          routedWaypoints: [
+            new THREE.Vector3(caseWorldPos.x + 11.2, 3.2, caseWorldPos.z + 6.0),
+            new THREE.Vector3(caseWorldPos.x + 12.6, 4.6, caseWorldPos.z - 3.5),
+            new THREE.Vector3(pAtx.x + 3.0, pAtx.y + 3.6, pAtx.z)
+          ],
+          cols: 2,
+          rows: 12,
+          strandRadius: 0.145,
+          strandSpacing: 0.42
+        });
+
+        scene.add(cpuCable.group, atxCable.group);
+        const cables = { atx24: atxCable, cpu8: cpuCable };
+
+        // ====================================================================
+        // 5. KONTROL KAMERA (PELACAKAN KURSOR POV HALUS X & Y + PRESET + ORBIT)
+        // ====================================================================
+        const camState = {
+          target: new THREE.Vector3(0.5, 2.2, 0.0),
+          desiredTarget: new THREE.Vector3(0.5, 2.2, 0.0),
+          radius: 44,
+          desiredRadius: 44,
+          theta: 0.08,
+          desiredTheta: 0.08,
+          phi: 0.56,
+          desiredPhi: 0.56,
+          // Offset pelacakan kursor POV halus (hanya sumbu X & Y, Z tetap)
+          povOffsetX: 0,
+          povOffsetY: 0,
+          desiredPovX: 0,
+          desiredPovY: 0
+        };
+
+        const cameraPresets = {
+          casingCables:   { target: [0.5, 2.2, 0.0], radius: 44, theta: 0.08, phi: 0.56 },
+          psuCompartment: { target: [caseWorldPos.x - 1.5, 2.0, caseWorldPos.z + 14.5], radius: 24, theta: -0.18, phi: 0.58 },
+          atx24:          { target: [pAtx.x + 1.2, pAtx.y + 0.5, pAtx.z], radius: 18.5, theta: 0.35, phi: 0.55 },
+          cpu8:           { target: [pCpu.x + 1.0, pCpu.y + 0.5, pCpu.z - 0.8], radius: 18.5, theta: -0.15, phi: 0.55 },
+          topDown:        { target: [1.0, 2.0, 0.0], radius: 50, theta: 0.0, phi: 0.12 }
+        };
+
+        function applyCameraPreset(name) {
+          const p = cameraPresets[name];
+          if (!p) return;
+          camState.desiredTarget.set(p.target[0], p.target[1], p.target[2]);
+          camState.desiredRadius = p.radius;
+          camState.desiredTheta = p.theta;
+          camState.desiredPhi = p.phi;
+
+          document.querySelectorAll('.cam-btn').forEach((btn) => {
+            if (btn.dataset.cam === name) {
+              btn.className = 'cam-btn bg-sky-600 text-white border border-sky-400/60 px-2.5 py-1.5 rounded-xl text-xs font-medium shadow-md transition hover:bg-sky-500 active:scale-95';
+            } else {
+              btn.className = 'cam-btn bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 px-2.5 py-1.5 rounded-xl text-xs font-medium backdrop-blur-md shadow-md transition active:scale-95';
+            }
+          });
+        }
+
+        document.querySelectorAll('.cam-btn').forEach((btn) => {
+          btn.addEventListener('click', () => applyCameraPreset(btn.dataset.cam));
+        });
+
+        // Tombol Navigasi Rotasi & Zoom Kamera di Bagian Atas-Tengah Viewport
+        const activeCamActions = {
+          left: false,
+          right: false,
+          up: false,
+          down: false,
+          zoomIn: false,
+          zoomOut: false
+        };
+
+        function bindCamHoldButton(btnId, actionKey, stepFn) {
+          const btn = document.getElementById(btnId);
+          if (!btn) return;
+          const startHold = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            activeCamActions[actionKey] = true;
+            stepFn();
+          };
+          const stopHold = () => {
+            activeCamActions[actionKey] = false;
+          };
+          btn.addEventListener('mousedown', startHold);
+          btn.addEventListener('touchstart', startHold, { passive: false });
+          btn.addEventListener('mouseup', stopHold);
+          btn.addEventListener('mouseleave', stopHold);
+          btn.addEventListener('touchend', stopHold);
+        }
+
+        bindCamHoldButton('btn-cam-left', 'left', () => { camState.desiredTheta -= 0.18; });
+        bindCamHoldButton('btn-cam-right', 'right', () => { camState.desiredTheta += 0.18; });
+        bindCamHoldButton('btn-cam-up', 'up', () => { camState.desiredPhi = Math.max(0.10, camState.desiredPhi - 0.14); });
+        bindCamHoldButton('btn-cam-down', 'down', () => { camState.desiredPhi = Math.min(1.42, camState.desiredPhi + 0.14); });
+        bindCamHoldButton('btn-cam-zoom-in', 'zoomIn', () => { camState.desiredRadius = Math.max(12.0, camState.desiredRadius - 2.8); });
+        bindCamHoldButton('btn-cam-zoom-out', 'zoomOut', () => { camState.desiredRadius = Math.min(68.0, camState.desiredRadius + 2.8); });
+
+        document.getElementById('btn-cam-reset-angle').addEventListener('click', (e) => {
+          e.stopPropagation();
+          applyCameraPreset('casingCables');
+        });
+
+        container.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          const zoomStep = e.deltaY * 0.02;
+          camState.desiredRadius = Math.max(12.0, Math.min(68.0, camState.desiredRadius + zoomStep));
+        }, { passive: false });
+
+        // ====================================================================
+        // 6. STATE TAHAPAN SIMULASI & SINKRONISASI UI
+        // ====================================================================
+        const simState = {
+          currentStage: 1, // 1 = Pasang ATX 24-Pin, 2 = Pasang CPU EPS 8-Pin, 3 = Selesai
+          draggingKey: null,
+          hoveredSlotKey: null,
+          highlightBoostSec: 0,
+          completed: false,
+          countdownTimer: null
+        };
+
+        let toastTimeout = null;
+        function showFeedback(title, msg, type = 'info') {
+          const toast = document.getElementById('feedback-toast');
+          const dot = document.getElementById('toast-dot');
+          const tTitle = document.getElementById('toast-title');
+          const tMsg = document.getElementById('toast-msg');
+
+          tTitle.textContent = title;
+          tMsg.textContent = msg;
+
+          if (type === 'warn') {
+            toast.className = 'pointer-events-none absolute top-24 sm:top-16 right-3 sm:right-4 max-w-xs sm:max-w-sm bg-slate-900/95 border border-amber-500/60 text-slate-100 px-3.5 py-2.5 rounded-xl shadow-2xl backdrop-blur-md transition-all duration-300 opacity-100 translate-y-0 z-20';
+            dot.className = 'mt-1 w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0';
+            tTitle.className = 'text-xs font-semibold text-amber-300';
+          } else if (type === 'success') {
+            toast.className = 'pointer-events-none absolute top-24 sm:top-16 right-3 sm:right-4 max-w-xs sm:max-w-sm bg-slate-900/95 border border-emerald-500/60 text-slate-100 px-3.5 py-2.5 rounded-xl shadow-2xl backdrop-blur-md transition-all duration-300 opacity-100 translate-y-0 z-20';
+            dot.className = 'mt-1 w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0';
+            tTitle.className = 'text-xs font-semibold text-emerald-300';
+          } else {
+            toast.className = 'pointer-events-none absolute top-24 sm:top-16 right-3 sm:right-4 max-w-xs sm:max-w-sm bg-slate-900/95 border border-sky-500/50 text-slate-100 px-3.5 py-2.5 rounded-xl shadow-2xl backdrop-blur-md transition-all duration-300 opacity-100 translate-y-0 z-20';
+            dot.className = 'mt-1 w-2.5 h-2.5 rounded-full bg-sky-400 shrink-0';
+            tTitle.className = 'text-xs font-semibold text-sky-300';
+          }
+
+          clearTimeout(toastTimeout);
+          toastTimeout = setTimeout(() => {
+            toast.classList.remove('opacity-100', 'translate-y-0');
+            toast.classList.add('opacity-0', '-translate-y-2');
+          }, 3600);
+        }
+
+        function updateSimulationUI() {
+          const connectedCount = (atxCable.isConnected ? 1 : 0) + (cpuCable.isConnected ? 1 : 0);
+          document.getElementById('step-progress-text').textContent = `${connectedCount} / 2`;
+
+          const headerBadge = document.getElementById('header-stage-badge');
+          const specTitle = document.getElementById('cable-spec-title');
+          const specDesc = document.getElementById('cable-spec-desc');
+
+          const cardAtx = document.getElementById('status-card-atx24');
+          const badgeAtx = document.getElementById('badge-status-atx24');
+          const cardCpu = document.getElementById('status-card-cpu8');
+          const badgeCpu = document.getElementById('badge-status-cpu8');
+
+          const stage1Item = document.getElementById('stage-item-1');
+          const stage1Badge = stage1Item.querySelector('.stage-badge');
+          const stage2Item = document.getElementById('stage-item-2');
+          const stage2Badge = stage2Item.querySelector('.stage-badge');
+
+          if (simState.currentStage === 1) {
+            headerBadge.textContent = 'Pemasangan Kabel Daya • Tahap 1';
+            cardAtx.className = 'p-2.5 rounded-xl bg-amber-400/10 border border-amber-400 transition';
+            badgeAtx.textContent = 'Target';
+            badgeAtx.className = 'text-[9px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300';
+
+            cardCpu.className = 'p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 transition';
+            badgeCpu.textContent = 'Menunggu';
+            badgeCpu.className = 'text-[9px] font-semibold px-1.5 py-0.5 rounded bg-slate-800 text-slate-400';
+
+            specTitle.textContent = 'Fungsi Kabel ATX 24-Pin (Motherboard Power)';
+            specDesc.innerHTML = 'Menyalurkan daya utama (+12V, +5V, +3.3V, dan +5VSB) dari PSU ke seluruh sirkuit motherboard, slot PCIe, RAM, chipset, serta sinyal <span class="font-mono text-amber-300">PS_ON</span> untuk mengaktifkan sistem.';
+
+            document.getElementById('live-instruction-text').textContent =
+              'Tahap 1: Seret (drag) konektor ATX 24-Pin dari ruang PSU melewati lubang jalur kabel menuju slot ATX_PWR 24-PIN.';
+
+            stage1Item.className = 'flex items-start gap-2.5 p-2.5 rounded-xl bg-sky-500/15 border border-sky-500/50 text-slate-100';
+            stage1Badge.className = 'stage-badge w-5 h-5 rounded-full bg-sky-400 text-slate-950 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5';
+            stage1Badge.textContent = '1';
+
+            stage2Item.className = 'flex items-start gap-2.5 p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 text-slate-400';
+            stage2Badge.className = 'stage-badge w-5 h-5 rounded-full bg-slate-800 text-slate-400 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5';
+            stage2Badge.textContent = '2';
+          } else if (simState.currentStage === 2) {
+            headerBadge.textContent = 'Pemasangan Kabel Daya • Tahap 2';
+            cardAtx.className = 'p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/40 transition';
+            badgeAtx.textContent = 'Terpasang';
+            badgeAtx.className = 'text-[9px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300';
+
+            cardCpu.className = 'p-2.5 rounded-xl bg-amber-400/10 border border-amber-400 transition';
+            badgeCpu.textContent = 'Target';
+            badgeCpu.className = 'text-[9px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300';
+
+            specTitle.textContent = 'Fungsi Kabel CPU EPS 8-Pin (4+4-Pin +12V)';
+            specDesc.innerHTML = 'Menyuplai arus tegangan tinggi khusus (+12V) langsung ke modul regulator tegangan (<span class="font-mono text-sky-300">VRM</span>) prosesor Intel di bagian atas motherboard agar CPU bekerja stabil.';
+
+            document.getElementById('live-instruction-text').textContent =
+              'Tahap 2: Seret (drag) konektor CPU EPS 8-Pin (4+4) dari ruang PSU melewati lubang jalur kabel menuju slot CPU_PWR 8-PIN.';
+
+            stage1Item.className = 'flex items-start gap-2.5 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200';
+            stage1Badge.className = 'stage-badge w-5 h-5 rounded-full bg-emerald-500 text-slate-950 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5';
+            stage1Badge.textContent = '✓';
+
+            stage2Item.className = 'flex items-start gap-2.5 p-2.5 rounded-xl bg-sky-500/15 border border-sky-500/50 text-slate-100';
+            stage2Badge.className = 'stage-badge w-5 h-5 rounded-full bg-sky-400 text-slate-950 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5';
+            stage2Badge.textContent = '2';
+          } else {
+            headerBadge.textContent = 'Pemasangan Kabel Daya • Tuntas';
+            cardAtx.className = 'p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/40 transition';
+            badgeAtx.textContent = 'Terpasang';
+            badgeAtx.className = 'text-[9px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300';
+
+            cardCpu.className = 'p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/40 transition';
+            badgeCpu.textContent = 'Terpasang';
+            badgeCpu.className = 'text-[9px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300';
+
+            document.getElementById('live-instruction-text').textContent =
+              'Selesai! Kabel ATX 24-Pin dan CPU EPS 8-Pin telah terhubung dan terkunci sempurna pada motherboard.';
+
+            stage1Item.className = 'flex items-start gap-2.5 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200';
+            stage1Badge.className = 'stage-badge w-5 h-5 rounded-full bg-emerald-500 text-slate-950 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5';
+            stage1Badge.textContent = '✓';
+
+            stage2Item.className = 'flex items-start gap-2.5 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200';
+            stage2Badge.className = 'stage-badge w-5 h-5 rounded-full bg-emerald-500 text-slate-950 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5';
+            stage2Badge.textContent = '✓';
+          }
+        }
+
+        // Toggle Collapsible Prosedur Pemasangan Kabel Daya
+        const toggleProcBtn = document.getElementById('btn-toggle-procedure');
+        const procContent = document.getElementById('procedure-content');
+        const procChevron = document.getElementById('procedure-chevron');
+        if (toggleProcBtn && procContent && procChevron) {
+          toggleProcBtn.addEventListener('click', () => {
+            const isHidden = procContent.classList.toggle('hidden');
+            toggleProcBtn.setAttribute('aria-expanded', String(!isHidden));
+            procChevron.style.transform = isHidden ? 'rotate(-90deg)' : 'rotate(0deg)';
+          });
+        }
+
+        // Tombol "Sorot Target"
+        document.getElementById('btn-highlight-target').addEventListener('click', () => {
+          simState.highlightBoostSec = 2.6;
+          if (simState.currentStage === 1) {
+            applyCameraPreset('casingCables');
+            showFeedback('Sorot Target: ATX 24-Pin', 'Tarik konektor ATX 24-Pin (20+4) di dalam ruang PSU melewati lubang jalur kabel menuju slot ATX_PWR 24-PIN.', 'info');
+          } else if (simState.currentStage === 2) {
+            applyCameraPreset('casingCables');
+            showFeedback('Sorot Target: CPU EPS 8-Pin (4+4)', 'Tarik konektor CPU 4+4 di dalam ruang PSU melewati lubang jalur kabel menuju slot CPU_PWR 8-PIN.', 'info');
+          } else {
+            applyCameraPreset('casingCables');
+            showFeedback('Semua Kabel Terpasang', 'Kabel ATX 24-Pin dan CPU EPS 8-Pin telah terpasang rapi.', 'success');
+          }
+        });
+
+        // Hitung Mundur 3 Detik Setelah Kedua Kabel Terpasang
+        function triggerCompletionSequence() {
+          if (simState.completed) return;
+          simState.completed = true;
+
+          const banner = document.getElementById('countdown-banner');
+          const numEl = document.getElementById('countdown-number');
+          banner.classList.remove('hidden');
+
+          let remaining = 3;
+          numEl.textContent = String(remaining);
+
+          clearInterval(simState.countdownTimer);
+          simState.countdownTimer = setInterval(() => {
+            remaining -= 1;
+            if (remaining > 0) {
+              numEl.textContent = String(remaining);
+            } else {
+              clearInterval(simState.countdownTimer);
+              banner.classList.add('hidden');
+              document.getElementById('choice-modal').classList.remove('hidden');
+            }
+          }, 1000);
+        }
+
+        // ====================================================================
+        // 7. INTERAKSI DRAG-AND-DROP KONEKTOR & VALIDASI KETAT
+        // ====================================================================
+        const raycaster = new THREE.Raycaster();
+        const pointerNDC = new THREE.Vector2();
+        const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -5.2);
+        const planeIntersectPt = new THREE.Vector3();
+
+        let isPointerDown = false;
+        let isOrbitingCamera = false;
+        let lastX = 0;
+        let lastY = 0;
+        let movedDistance = 0;
+
+        function updateNDC(clientX, clientY) {
+          const rect = renderer.domElement.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) {
+            pointerNDC.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+            pointerNDC.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+          }
+        }
+
+        function getActiveTargetSlotKey() {
+          if (simState.currentStage === 1) return 'atx24';
+          if (simState.currentStage === 2) return 'cpu8';
+          return null;
+        }
+
+        function onPointerStart(clientX, clientY, button = 0) {
+          isPointerDown = true;
+          isOrbitingCamera = false;
+          lastX = clientX;
+          lastY = clientY;
+          movedDistance = 0;
+
+          if (button === 2 || button === 1) {
+            isOrbitingCamera = true;
+            container.style.cursor = 'grabbing';
+            return;
+          }
+          if (button !== 0) return;
+
+          updateNDC(clientX, clientY);
+          raycaster.setFromCamera(pointerNDC, camera);
+
+          const allPlugMeshes = [...atxCable.draggableMeshes, ...cpuCable.draggableMeshes];
+          const hits = raycaster.intersectObjects(allPlugMeshes, false);
+
+          if (hits.length > 0) {
+            const hitKey = hits[0].object.userData.cableKey;
+            const cableObj = cables[hitKey];
+
+            if (!cableObj || cableObj.isConnected) {
+              isOrbitingCamera = true;
+              return;
+            }
+
+            if (simState.currentStage === 1 && hitKey === 'cpu8') {
+              showFeedback(
+                'Urutan Tahap Salah',
+                'Selesaikan Tahap 1 terlebih dahulu: seret konektor ATX 24-Pin dari ruang PSU melewati lubang jalur kabel ke slot ATX_PWR 24-PIN.',
+                'warn'
+              );
+              isPointerDown = false;
+              return;
+            }
+
+            simState.draggingKey = hitKey;
+            cableObj.isDragging = true;
+            cableObj.targetPlugEuler.set(0, 0, 0);
+            container.style.cursor = 'grabbing';
+            return;
+          }
+
+          isOrbitingCamera = true;
+        }
+
+        function onPointerMove(clientX, clientY) {
+          const rect = renderer.domElement.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) {
+            const normX = ((clientX - rect.left) / rect.width) * 2 - 1;
+            const normY = ((clientY - rect.top) / rect.height) * 2 - 1;
+            // Pelacakan kursor POV halus (hanya sumbu X & Y, Z tetap)
+            camState.desiredPovX = Math.max(-1, Math.min(1, normX)) * 1.45;
+            camState.desiredPovY = Math.max(-1, Math.min(1, -normY)) * 1.15;
+          }
+
+          const dx = clientX - lastX;
+          const dy = clientY - lastY;
+          movedDistance += Math.hypot(dx, dy);
+          lastX = clientX;
+          lastY = clientY;
+
+          if (!isPointerDown) return;
+
+          if (simState.draggingKey) {
+            const cableObj = cables[simState.draggingKey];
+            updateNDC(clientX, clientY);
+            raycaster.setFromCamera(pointerNDC, camera);
+
+            if (raycaster.ray.intersectPlane(dragPlane, planeIntersectPt)) {
+              const clampedX = Math.max(-24, Math.min(26, planeIntersectPt.x));
+              const clampedZ = Math.max(-28, Math.min(34, planeIntersectPt.z));
+              cableObj.targetPlugPos.set(clampedX, 5.2, clampedZ);
+
+              const distToAtx = Math.hypot(clampedX - pAtx.x, clampedZ - pAtx.z);
+              const distToCpu = Math.hypot(clampedX - pCpu.x, clampedZ - pCpu.z);
+
+              if (distToAtx < 2.8) {
+                simState.hoveredSlotKey = 'atx24';
+              } else if (distToCpu < 2.8) {
+                simState.hoveredSlotKey = 'cpu8';
+              } else {
+                simState.hoveredSlotKey = null;
+              }
+            }
+          } else if (isOrbitingCamera && movedDistance > 3) {
+            container.style.cursor = 'grabbing';
+            camState.desiredTheta -= dx * 0.0075;
+            camState.desiredPhi = Math.max(0.10, Math.min(1.42, camState.desiredPhi - dy * 0.0065));
+          }
+        }
+
+        function onPointerEnd() {
+          container.style.cursor = 'grab';
+
+          if (simState.draggingKey) {
+            const key = simState.draggingKey;
+            const cableObj = cables[key];
+            const droppedSlot = simState.hoveredSlotKey;
+
+            cableObj.isDragging = false;
+            simState.draggingKey = null;
+            simState.hoveredSlotKey = null;
+
+            if (key === 'atx24' && droppedSlot === 'atx24') {
+              cableObj.isConnected = true;
+              cableObj.targetPlugPos.copy(pAtx);
+              cableObj.targetPlugEuler.set(0, 0, 0);
+
+              simState.currentStage = 2;
+              showFeedback(
+                'Tahap 1 Selesai: ATX 24-Pin Terpasang!',
+                'Konektor 24-Pin (20+4) terkunci pada slot ATX_PWR. Lanjut Tahap 2: seret konektor CPU EPS 8-Pin (4+4) ke slot atas motherboard.',
+                'success'
+              );
+              updateSimulationUI();
+            } else if (key === 'cpu8' && droppedSlot === 'cpu8') {
+              cableObj.isConnected = true;
+              cableObj.targetPlugPos.copy(pCpu);
+              cableObj.targetPlugEuler.set(0, 0, 0);
+
+              simState.currentStage = 3;
+              pcCase.isSystemPowered = true;
+              applyCameraPreset('casingCables');
+              showFeedback(
+                'Tahap 2 Selesai: CPU EPS 8-Pin Terpasang!',
+                'Konektor 4+4 Pin terkunci pada slot CPU_PWR. Seluruh kabel daya utama telah terpasang sempurna!',
+                'success'
+              );
+              updateSimulationUI();
+              triggerCompletionSequence();
+            } else if (droppedSlot && droppedSlot !== key) {
+              const errMsg = key === 'atx24'
+                ? 'Tipe Konektor Tidak Cocok! Konektor ATX 24-Pin (20+4 panjang) tidak sesuai dengan slot CPU 8-Pin. Pasang ke slot ATX_PWR 24-PIN di tepi kanan motherboard.'
+                : 'Tipe Konektor Tidak Cocok! Konektor CPU EPS 8-Pin (4+4 persegi) khusus untuk slot CPU_PWR 8-PIN di bagian atas motherboard.';
+              showFeedback('Slot Tujuan Salah!', errMsg, 'warn');
+              cableObj.targetPlugPos.copy(cableObj.stagingWorld);
+              cableObj.targetPlugEuler.copy(cableObj.stagingEuler);
+            } else {
+              const hintMsg = key === 'atx24'
+                ? 'Konektor ATX 24-Pin dikembalikan ke dalam ruang PSU. Seret melewati lubang jalur kabel hingga tepat di atas slot ATX_PWR 24-PIN.'
+                : 'Konektor CPU EPS 8-Pin dikembalikan ke dalam ruang PSU. Seret melewati lubang jalur kabel hingga tepat di atas slot CPU_PWR 8-PIN.';
+              showFeedback('Belum Tepat pada Slot', hintMsg, 'info');
+              cableObj.targetPlugPos.copy(cableObj.stagingWorld);
+              cableObj.targetPlugEuler.copy(cableObj.stagingEuler);
+            }
+          }
+
+          isPointerDown = false;
+          isOrbitingCamera = false;
+        }
+
+        container.addEventListener('contextmenu', (e) => e.preventDefault());
+        container.addEventListener('mousedown', (e) => onPointerStart(e.clientX, e.clientY, e.button));
+        window.addEventListener('mousemove', (e) => onPointerMove(e.clientX, e.clientY));
+        window.addEventListener('mouseup', onPointerEnd);
+
+        container.addEventListener('touchstart', (e) => {
+          if (e.touches.length === 1) {
+            onPointerStart(e.touches[0].clientX, e.touches[0].clientY, 0);
+          }
+        }, { passive: true });
+
+        container.addEventListener('touchmove', (e) => {
+          if (e.touches.length === 1) {
+            onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
+          }
+        }, { passive: true });
+
+        container.addEventListener('touchend', onPointerEnd);
+
+        // ====================================================================
+        // 8. RESET SIMULASI & MODAL PILIHAN AKHIR
+        // ====================================================================
+        function resetFullSimulation() {
+          clearInterval(simState.countdownTimer);
+          simState.currentStage = 1;
+          simState.draggingKey = null;
+          simState.hoveredSlotKey = null;
+          simState.highlightBoostSec = 0;
+          simState.completed = false;
+
+          pcCase.isSystemPowered = false;
+          atxCable.reset();
+          cpuCable.reset();
+
+          document.getElementById('countdown-banner').classList.add('hidden');
+          document.getElementById('choice-modal').classList.add('hidden');
+          document.getElementById('summary-modal').classList.add('hidden');
+          document.getElementById('inspect-mode-bar').classList.add('hidden');
+
+          applyCameraPreset('casingCables');
+          updateSimulationUI();
+          showFeedback('Simulasi Direset', 'Kabel ATX 24-Pin dan CPU EPS 8-Pin dikembalikan ke posisi rapi di dalam ruang PSU casing.', 'info');
+        }
+
+        document.getElementById('btn-reset-sim').addEventListener('click', resetFullSimulation);
+        document.getElementById('btn-restart-sim').addEventListener('click', resetFullSimulation);
+
+        document.getElementById('btn-inspect-result').addEventListener('click', () => {
+          document.getElementById('choice-modal').classList.add('hidden');
+          document.getElementById('inspect-mode-bar').classList.remove('hidden');
+          applyCameraPreset('casingCables');
+          showFeedback('Mode Inspeksi Hasil', 'Putar atau zoom kamera untuk memeriksa kedua konektor daya yang terpasang.', 'info');
+        });
+
+        document.getElementById('btn-finish-game').addEventListener('click', () => {
+          document.getElementById('choice-modal').classList.add('hidden');
+          document.getElementById('inspect-mode-bar').classList.add('hidden');
+          document.getElementById('summary-modal').classList.remove('hidden');
+        });
+
+        document.getElementById('btn-finish-from-inspect').addEventListener('click', () => {
+          document.getElementById('inspect-mode-bar').classList.add('hidden');
+          document.getElementById('summary-modal').classList.remove('hidden');
+        });
+
+        const btnReview = document.getElementById('btn-review-from-summary');
+        if (btnReview) {
+          btnReview.addEventListener('click', () => {
+            document.getElementById('summary-modal').classList.add('hidden');
+            document.getElementById('inspect-mode-bar').classList.remove('hidden');
+          });
+        }
+
+        // ====================================================================
+        // 9. RESIZE OBSERVER & LOOP ANIMASI
+        // ====================================================================
+        function handleViewportResize() {
+          const size = getViewportSize();
+          camera.aspect = size.w / size.h;
+          camera.updateProjectionMatrix();
+          renderer.setSize(size.w, size.h, false);
+        }
+
+        window.addEventListener('resize', handleViewportResize);
+        if (typeof ResizeObserver !== 'undefined') {
+          const ro = new ResizeObserver(() => handleViewportResize());
+          ro.observe(container);
+        }
+        requestAnimationFrame(handleViewportResize);
+        setTimeout(handleViewportResize, 120);
+
+        let lastTime = performance.now();
+        let elapsedSec = 0;
+
+        function animate(now) {
+          requestAnimationFrame(animate);
+          const dt = Math.min(0.05, (now - lastTime) / 1000);
+          lastTime = now;
+          elapsedSec += dt;
+
+          if (simState.highlightBoostSec > 0) {
+            simState.highlightBoostSec = Math.max(0, simState.highlightBoostSec - dt);
+          }
+
+          // Update rotasi & zoom dari tombol hold HUD
+          if (activeCamActions.left) camState.desiredTheta -= dt * 1.45;
+          if (activeCamActions.right) camState.desiredTheta += dt * 1.45;
+          if (activeCamActions.up) camState.desiredPhi = Math.max(0.10, camState.desiredPhi - dt * 1.15);
+          if (activeCamActions.down) camState.desiredPhi = Math.min(1.42, camState.desiredPhi + dt * 1.15);
+          if (activeCamActions.zoomIn) camState.desiredRadius = Math.max(12.0, camState.desiredRadius - dt * 22.0);
+          if (activeCamActions.zoomOut) camState.desiredRadius = Math.min(68.0, camState.desiredRadius + dt * 22.0);
+
+          const camLerp = Math.min(1, dt * 8);
+          camState.target.lerp(camState.desiredTarget, camLerp);
+          camState.radius += (camState.desiredRadius - camState.radius) * camLerp;
+          camState.theta += (camState.desiredTheta - camState.theta) * camLerp;
+          camState.phi += (camState.desiredPhi - camState.phi) * camLerp;
+          camState.povOffsetX += (camState.desiredPovX - camState.povOffsetX) * camLerp;
+          camState.povOffsetY += (camState.desiredPovY - camState.povOffsetY) * camLerp;
+
+          const sinPhi = Math.sin(camState.phi);
+          const camX = camState.target.x + camState.radius * sinPhi * Math.sin(camState.theta) + camState.povOffsetX;
+          const camY = Math.max(3.5, camState.target.y + camState.radius * Math.cos(camState.phi) + camState.povOffsetY);
+          const camZ = camState.target.z + camState.radius * sinPhi * Math.cos(camState.theta);
+
+          camera.position.set(camX, camY, camZ);
+          camera.lookAt(camState.target);
+
+          // Sorot kabel dan slot target
+          const activeSlot = getActiveTargetSlotKey();
+          atxCable.setHighlight(activeSlot === 'atx24', simState.highlightBoostSec, elapsedSec);
+          cpuCable.setHighlight(activeSlot === 'cpu8', simState.highlightBoostSec, elapsedSec);
+          motherboard.updateSlotHighlights(activeSlot, simState.hoveredSlotKey, simState.highlightBoostSec, elapsedSec);
+
+          // Update geometri bundel kabel & status casing
+          atxCable.update(dt);
+          cpuCable.update(dt);
+          pcCase.update();
+
+          renderer.render(scene, camera);
+        }
+
+        updateSimulationUI();
+        requestAnimationFrame(animate);
+      } catch (err) {
+        console.error('Error initializing 3D simulation:', err);
+        container.innerHTML = `<div class="flex items-center justify-center h-full p-6 text-center text-xs text-rose-300">Terjadi kesalahan saat memuat tampilan 3D: ${err.message}</div>`;
+      }
+    }
+
+    if (document.readyState === 'complete') {
+      initSimulation();
+    } else {
+      window.addEventListener('load', initSimulation);
+    }
+  </script>
+</body>
+</html>

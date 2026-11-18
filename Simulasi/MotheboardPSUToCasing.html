@@ -1,0 +1,3143 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulasi 3D: Pemasangan Motherboard &amp; PSU ke Casing</title>
+  <!-- Tailwind CSS untuk tata letak UI yang bersih dan responsif -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Three.js r128 untuk rendering 3D interaktif -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- Google Font Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Inter', sans-serif;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #090d16;
+      color: #f1f5f9;
+    }
+    #canvas-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: default;
+    }
+    #canvas-container canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+    }
+    /* Custom scrollbar halus untuk panel samping */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(71, 85, 105, 0.8);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 1);
+    }
+  </style>
+</head>
+<body class="flex flex-col md:flex-row h-screen w-screen overflow-hidden bg-slate-950 text-slate-100 select-none">
+
+  <!-- ===================================================================== -->
+  <!-- AREA VIEWPORT 3D UTAMA (MEJA KERJA, CASING, MOTHERBOARD & PSU)        -->
+  <!-- ===================================================================== -->
+  <main class="relative flex-1 h-[55vh] md:h-full w-full overflow-hidden bg-gradient-to-b from-slate-900 via-slate-950 to-black">
+    <div id="canvas-container"></div>
+
+    <!-- Header Overlay Kiri Atas -->
+    <div class="absolute top-3 left-3 sm:top-4 sm:left-4 pointer-events-none flex flex-col gap-1.5 max-w-[88%] sm:max-w-md z-10">
+      <div class="flex items-center gap-2 pointer-events-auto">
+        <a href="../index.html#rakit" class="inline-flex items-center gap-1.5 bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 hover:border-sky-500/50 px-2.5 py-1 rounded-xl text-xs font-medium text-slate-300 hover:text-white transition shadow-lg active:scale-95" title="Kembali ke Beranda">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+          <span>Kembali</span>
+        </a>
+        <div class="inline-flex items-center gap-2 bg-slate-900/90 backdrop-blur-md border border-sky-500/40 px-3 py-1 rounded-xl shadow-lg w-fit">
+          <span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
+          <span class="text-[11px] font-semibold tracking-wider uppercase text-sky-300">Tahap 6 • Perakitan Hardware</span>
+        </div>
+      </div>
+      <h1 class="text-base sm:text-xl font-bold text-white drop-shadow">
+        Pemasangan Motherboard &amp; PSU ke Casing
+      </h1>
+      <!-- Petunjuk Langkah Aktif Real-Time -->
+      <div id="live-instruction-pill" class="inline-flex items-center gap-2 text-xs text-amber-200 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-amber-500/40 shadow-md w-fit">
+        <span class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
+        <span id="live-instruction-text">Langkah 1: Putar Motherboard ke 0° (Rear I/O di kiri), lalu drag ke dalam casing.</span>
+      </div>
+    </div>
+
+    <!-- Banner Hitung Mundur 3 Detik Setelah Motherboard & PSU Terpasang Sempurna -->
+    <div id="countdown-banner" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20">
+      <div class="bg-slate-900/95 border-2 border-emerald-400/80 backdrop-blur-xl px-6 py-4 rounded-2xl shadow-2xl text-center">
+        <div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-400 text-emerald-300 font-bold text-lg mb-2" id="countdown-number">
+          3
+        </div>
+        <h2 class="text-sm sm:text-base font-bold text-emerald-300">Motherboard &amp; PSU Terpasang!</h2>
+        <p class="text-xs text-slate-300 mt-1">Memverifikasi dudukan standoff, baut PSU &amp; jalur kabel...</p>
+      </div>
+    </div>
+
+    <!-- Tombol Mengambang "Selesaikan Game" saat pengguna memilih "Lihat Hasil Dahulu" -->
+    <div id="inspect-mode-bar" class="hidden absolute top-3 right-3 sm:top-4 sm:right-4 z-20 flex items-center gap-2 bg-slate-900/95 border border-emerald-500/50 backdrop-blur-md px-3 py-2 rounded-2xl shadow-xl">
+      <span class="text-xs text-emerald-300 font-medium hidden sm:inline">Mode Inspeksi Hasil</span>
+      <button id="btn-finish-from-inspect" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow transition active:scale-95">
+        Selesaikan Game
+      </button>
+    </div>
+
+    <!-- Bar Bawah: Preset Sudut Kamera & Petunjuk Navigasi -->
+    <div class="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 flex flex-col xl:flex-row xl:items-center justify-between gap-2 pointer-events-none z-10">
+      <div class="flex flex-wrap items-center gap-1.5 pointer-events-auto">
+        <button data-cam="workbench" class="cam-btn bg-sky-600 text-white border border-sky-400/60 px-2.5 py-1.5 rounded-xl text-xs font-medium shadow-md transition hover:bg-sky-500 active:scale-95">
+          Meja &amp; Komponen
+        </button>
+        <button data-cam="caseMotherboard" class="cam-btn bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 px-2.5 py-1.5 rounded-xl text-xs font-medium backdrop-blur-md shadow-md transition active:scale-95">
+          Fokus Tray Motherboard
+        </button>
+        <button data-cam="casePSU" class="cam-btn bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 px-2.5 py-1.5 rounded-xl text-xs font-medium backdrop-blur-md shadow-md transition active:scale-95">
+          Fokus Ruang PSU
+        </button>
+        <button data-cam="topDown" class="cam-btn bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 px-2.5 py-1.5 rounded-xl text-xs font-medium backdrop-blur-md shadow-md transition active:scale-95">
+          Tampak Atas
+        </button>
+      </div>
+
+      <!-- Petunjuk Kontrol Mouse/Sentuh -->
+      <div class="hidden md:flex items-center bg-slate-900/85 backdrop-blur-md border border-slate-800 px-3 py-1.5 rounded-xl text-[11px] text-slate-300 gap-3 w-fit pointer-events-none">
+        <span>✋ Drag Motherboard &amp; PSU ke Casing</span>
+        <span>🖱️ Klik Komponen: Kencangkan Baut</span>
+        <span>👀 Gerak Kursor: Geser POV (X/Y)</span>
+      </div>
+    </div>
+
+    <!-- Kotak Pesan / Toast Non-Blocking -->
+    <div id="feedback-toast" class="pointer-events-none absolute top-24 sm:top-4 right-3 sm:right-4 max-w-xs sm:max-w-sm bg-slate-900/95 border border-sky-500/50 text-slate-100 px-3.5 py-2.5 rounded-xl shadow-2xl backdrop-blur-md transition-all duration-300 opacity-0 -translate-y-2 z-20">
+      <div class="flex items-start gap-2.5">
+        <span id="toast-dot" class="mt-1 w-2.5 h-2.5 rounded-full bg-sky-400 shrink-0"></span>
+        <div>
+          <p id="toast-title" class="text-xs font-semibold text-sky-300">Informasi</p>
+          <p id="toast-msg" class="text-xs text-slate-300 mt-0.5 leading-relaxed">Siap memasang motherboard dan PSU ke casing.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL PILIHAN SETELAH 3 DETIK MOTHERBOARD & PSU TERPASANG SEMPURNA -->
+    <div id="choice-modal" class="hidden absolute inset-0 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 z-30">
+      <div class="bg-slate-900 border border-slate-700/90 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div>
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-emerald-400">Tahap Selesai</span>
+            <h2 class="text-lg font-bold text-white">Motherboard &amp; PSU Terpasang!</h2>
+          </div>
+        </div>
+
+        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+          Motherboard ATX lengkap dengan CPU Cooler &amp; GPU telah dikencangkan presisi di atas 9 standoff casing, dan unit PSU beserta kabel dayanya telah terpasang kokoh di kompartemen PSU bawah.
+        </p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <button id="btn-inspect-result" class="w-full py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-600 text-xs sm:text-sm font-semibold transition active:scale-95">
+            Lihat Hasil Dahulu
+          </button>
+          <button id="btn-finish-game" class="w-full py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/50 text-xs sm:text-sm font-semibold shadow-lg shadow-emerald-950/50 transition active:scale-95">
+            Selesaikan Game
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL RINGKASAN SELESAI GAME -->
+    <div id="summary-modal" class="hidden absolute inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-40">
+      <div class="bg-slate-900 border border-emerald-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5">
+        <div class="text-center space-y-2">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center text-emerald-300">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <span class="inline-block text-[11px] font-semibold uppercase tracking-widest text-emerald-400">Simulasi Tahap 6 Tuntas</span>
+          <h2 class="text-xl font-bold text-white">Pemasangan Motherboard &amp; PSU Selesai</h2>
+          <p class="text-xs text-slate-300">Seluruh prosedur perakitan komponen utama ke dalam casing PC ATX Mid-Tower telah diselesaikan dengan benar.</p>
+        </div>
+
+        <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 space-y-2 text-xs">
+          <div class="flex items-center justify-between text-slate-300">
+            <span>1. Penyelarasan Rear I/O &amp; Dudukan Motherboard</span>
+            <span class="text-emerald-400 font-semibold">✓ Sejajar (0°)</span>
+          </div>
+          <div class="flex items-center justify-between text-slate-300">
+            <span>2. Pengencangan 9 Baut Standoff Motherboard</span>
+            <span class="text-emerald-400 font-semibold">✓ Terkunci</span>
+          </div>
+          <div class="flex items-center justify-between text-slate-300">
+            <span>3. Pemasangan Unit PSU &amp; 4 Baut Braket Belakang</span>
+            <span class="text-emerald-400 font-semibold">✓ Terpasang</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <a href="../index.html#rakit" id="btn-back-home" class="w-full py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold text-center transition active:scale-95 flex items-center justify-center">
+            Kembali ke Menu
+          </a>
+          <button id="btn-restart-sim" class="w-full py-2.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-md transition active:scale-95">
+            Ulangi Simulasi
+          </button>
+          <a href="CABLE.html" id="btn-next-sim" class="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold text-center shadow-md transition active:scale-95 flex items-center justify-center">
+            Simulasi Selanjutnya [Pemasangan Kabel Daya]
+          </a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- PANEL KONTROL SAMPING (TERBAGI 2 KARTU: ORIENTASI & PROSEDUR)         -->
+  <!-- ===================================================================== -->
+  <aside class="w-full md:w-80 lg:w-96 h-[45vh] md:h-full bg-slate-950 border-t md:border-t-0 md:border-l border-slate-800 flex flex-col p-3 sm:p-3.5 gap-3 z-20 shadow-2xl overflow-y-auto">
+
+    <!-- KARTU 1: ORIENTASI KOMPONEN (TEMA KUNING CERAH) -->
+    <section class="bg-gradient-to-br from-amber-500/15 via-slate-900 to-amber-950/20 border-2 border-amber-400/80 rounded-2xl p-3.5 space-y-3 shrink-0 shadow-lg shadow-amber-500/10">
+      <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-amber-400/30">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shadow-sm shadow-amber-300"></span>
+          <div>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-amber-300">1. Orientasi Komponen</h2>
+            <p class="text-[11px] text-amber-200/70">Casing ATX Mid-Tower • Motherboard &amp; PSU</p>
+          </div>
+        </div>
+        <button id="btn-reset-sim" class="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/50 text-xs font-medium transition active:scale-95">
+          Reset
+        </button>
+      </div>
+
+      <!-- Pemilih Komponen Aktif (Penanda Kuning #facc15 di UI & 3D) -->
+      <div class="grid grid-cols-2 gap-2">
+        <button id="btn-select-mb" type="button" class="flex items-center justify-between px-2.5 py-2 rounded-xl bg-amber-500/20 border border-amber-400/70 text-amber-200 text-[11px] font-bold transition active:scale-95 shadow-sm">
+          <span class="truncate">Motherboard</span>
+          <span id="dot-select-mb" class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
+        </button>
+        <button id="btn-select-psu" type="button" class="flex items-center justify-between px-2.5 py-2 rounded-xl bg-slate-950/80 hover:bg-amber-500/10 border border-amber-400/30 text-slate-300 text-[11px] font-semibold transition active:scale-95">
+          <span class="truncate">PSU + Kabel</span>
+          <span id="dot-select-psu" class="w-2 h-2 rounded-full bg-slate-600 shrink-0"></span>
+        </button>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <span id="orientation-label" class="text-[11px] font-semibold text-amber-200">Sudut Rear I/O Motherboard:</span>
+        <span id="component-angle-badge" class="text-[11px] px-2.5 py-0.5 rounded-full font-bold bg-amber-400 text-slate-950 border border-amber-300 shadow-sm">
+          90° (Belum Sejajar)
+        </span>
+      </div>
+
+      <!-- Diagram Visual Penyelarasan Komponen vs Casing -->
+      <div class="flex items-center justify-between gap-3 bg-slate-950/90 border border-amber-400/40 rounded-xl p-3 shadow-inner">
+        <div class="space-y-1">
+          <p id="diagram-title" class="text-xs font-bold text-amber-300">Penyelarasan Rear I/O</p>
+          <p id="diagram-desc" class="text-[11px] text-slate-300 leading-relaxed">
+            Putar Motherboard hingga panel <span class="text-amber-300 font-bold underline decoration-amber-400">Rear I/O</span> menghadap ke <span class="text-white font-semibold">kiri</span> menuju lubang belakang casing (<span class="text-emerald-300 font-medium">orientasi 0°</span>).
+          </p>
+        </div>
+        <!-- Mini Indikator Visual Arah Komponen -->
+        <div class="relative w-16 h-16 rounded-lg bg-amber-950/40 border border-amber-400/50 shrink-0 flex items-center justify-center shadow-inner overflow-hidden">
+          <span class="absolute left-1 text-[7px] font-mono font-bold text-amber-300">REAR</span>
+          <div id="orientation-item-visual" class="relative w-9 h-11 rounded bg-slate-800 border-2 border-amber-400 flex items-center justify-center transition-transform duration-300 shadow-sm" style="transform: rotate(90deg);">
+            <span id="orientation-item-text" class="text-[7px] font-bold text-slate-300">ATX</span>
+            <!-- Strip kuning penanda sisi belakang (Rear I/O / Saklar PSU) di sisi kiri saat 0° -->
+            <span class="absolute left-0 top-1 bottom-1 w-1.5 rounded-l bg-amber-400"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tombol Putar Orientasi Kiri / Kanan -->
+      <div class="grid grid-cols-2 gap-2">
+        <button id="btn-rotate-ccw" class="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-100 border border-amber-400/60 text-xs font-semibold transition active:scale-95 disabled:opacity-40 disabled:pointer-events-none shadow-sm">
+          <svg class="w-4 h-4 text-amber-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+          </svg>
+          Putar Kiri (-90°)
+        </button>
+        <button id="btn-rotate-cw" class="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-100 border border-amber-400/60 text-xs font-semibold transition active:scale-95 disabled:opacity-40 disabled:pointer-events-none shadow-sm">
+          Putar Kanan (+90°)
+          <svg class="w-4 h-4 text-amber-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 10H11a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6" />
+          </svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- KARTU 2: PROSEDUR PERAKITAN (DAPAT DITUTUP/DIBUKA) -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex flex-col flex-1 min-h-0 shadow-lg">
+      <button id="btn-toggle-procedure" type="button" aria-expanded="true" class="w-full flex items-center justify-between text-left focus:outline-none group">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <h3 class="text-xs font-bold uppercase tracking-wider text-white group-hover:text-emerald-300 transition">2. Prosedur Perakitan</h3>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="step-progress-text" class="text-[11px] font-mono text-slate-400">0 / 4</span>
+          <span class="w-6 h-6 rounded-lg bg-slate-800 group-hover:bg-slate-700 border border-slate-700/80 flex items-center justify-center text-slate-300 transition">
+            <svg id="procedure-chevron" class="w-3.5 h-3.5 transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </span>
+        </div>
+      </button>
+
+      <div id="procedure-content" class="mt-3 pt-3 border-t border-slate-800/80 overflow-y-auto pr-0.5">
+        <ol class="space-y-2 text-xs">
+          <li id="step-item-1" class="flex items-start gap-2.5 p-2 rounded-xl bg-sky-500/10 border border-sky-500/40 text-slate-100">
+            <span class="step-badge w-5 h-5 rounded-full bg-sky-500 text-slate-950 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">1</span>
+            <div>
+              <p class="font-semibold">Pasang Motherboard ke dalam Casing</p>
+              <p class="text-[11px] text-slate-400">Putar motherboard ke 0° (Rear I/O di kiri), lalu drag ke tray standoff casing.</p>
+            </div>
+          </li>
+
+          <li id="step-item-2" class="flex items-start gap-2.5 p-2 rounded-xl bg-slate-950/70 border border-slate-800 text-slate-400">
+            <span class="step-badge w-5 h-5 rounded-full bg-slate-800 text-slate-400 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">2</span>
+            <div>
+              <p class="font-semibold">Kencangkan 9 Baut Motherboard</p>
+              <p class="text-[11px] text-slate-500">Klik pada motherboard di dalam casing untuk mengunci ke-9 baut standoff.</p>
+            </div>
+          </li>
+
+          <li id="step-item-3" class="flex items-start gap-2.5 p-2 rounded-xl bg-slate-950/70 border border-slate-800 text-slate-400">
+            <span class="step-badge w-5 h-5 rounded-full bg-slate-800 text-slate-400 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">3</span>
+            <div>
+              <p class="font-semibold">Pasang PSU ke Kompartemen Bawah Casing</p>
+              <p class="text-[11px] text-slate-500">Putar PSU ke 0° (saklar AC di kiri, kabel di kanan), lalu drag ke ruang PSU.</p>
+            </div>
+          </li>
+
+          <li id="step-item-4" class="flex items-start gap-2.5 p-2 rounded-xl bg-slate-950/70 border border-slate-800 text-slate-400">
+            <span class="step-badge w-5 h-5 rounded-full bg-slate-800 text-slate-400 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">4</span>
+            <div>
+              <p class="font-semibold">Kencangkan 4 Baut Belakang PSU</p>
+              <p class="text-[11px] text-slate-500">Klik pada PSU atau braket belakang casing untuk mengunci 4 baut pengunci.</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+  </aside>
+
+  <script>
+    /**
+     * ============================================================================
+     * 1. GENERATOR TEKSTUR PROSEDURAL (KONSISTEN DENGAN MASTER BLUEPRINT)
+     * ============================================================================
+     */
+    class ProceduralTextures {
+      static createPCBTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 1280;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#131720';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < canvas.width; i += 8) {
+          ctx.beginPath();
+          ctx.moveTo(i, 0);
+          ctx.lineTo(i, canvas.height);
+          ctx.stroke();
+        }
+        for (let j = 0; j < canvas.height; j += 8) {
+          ctx.beginPath();
+          ctx.moveTo(0, j);
+          ctx.lineTo(canvas.width, j);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = '#1e2636';
+        ctx.lineWidth = 2.5;
+
+        for (let i = 0; i < 18; i++) {
+          const yStart = 230 + i * 11;
+          ctx.beginPath();
+          ctx.moveTo(540, yStart);
+          ctx.lineTo(595, yStart - 18);
+          ctx.lineTo(665, yStart - 18);
+          ctx.stroke();
+        }
+
+        for (let i = 0; i < 16; i++) {
+          const xStart = 350 + i * 10;
+          ctx.beginPath();
+          ctx.moveTo(xStart, 415);
+          ctx.lineTo(xStart - 12, 480);
+          ctx.lineTo(xStart - 12, 680);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.16)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(80, 960);
+        ctx.lineTo(340, 1180);
+        ctx.lineTo(940, 1180);
+        ctx.stroke();
+
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = 'bold 24px Inter, sans-serif';
+        ctx.fillText('INTEL ATX-Z790 MASTER', 110, 920);
+
+        ctx.font = '600 14px monospace';
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText('REV 1.0 • DESIGNED FOR 3D SIMULATION', 110, 944);
+
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = 'bold 13px monospace';
+        ctx.fillText('LGA 1700 / 1851', 395, 192);
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillText('CPU_FAN', 585, 174);
+        ctx.fillStyle = '#e2e8f0';
+        ctx.fillText('DIMM_A1  A2  B1  B2', 662, 130);
+        ctx.fillText('M.2_1 (SOCKET 3) PCIe 5.0 x4', 285, 535);
+        ctx.fillText('PCIEX16 (GEN 5.0)', 235, 675);
+        ctx.fillText('PCIEX4_1', 235, 825);
+        ctx.fillText('PCIEX1_1', 235, 965);
+        ctx.fillText('ATX_PWR 24-PIN', 855, 385);
+        ctx.fillText('CPU_PWR 8+8', 180, 42);
+        ctx.fillText('SATA6G_1-4', 865, 1115);
+        ctx.fillText('F_PANEL', 780, 1235);
+
+        const mountingHoles = [
+          [48, 52], [512, 52], [965, 52],
+          [48, 635], [512, 635], [965, 635],
+          [48, 1210], [512, 1210], [965, 1210]
+        ];
+        mountingHoles.forEach(([hx, hy]) => {
+          ctx.beginPath();
+          ctx.arc(hx, hy, 15, 0, Math.PI * 2);
+          ctx.fillStyle = '#d4af37';
+          ctx.fill();
+
+          for (let a = 0; a < 8; a++) {
+            const rad = (a / 8) * Math.PI * 2;
+            ctx.beginPath();
+            ctx.arc(hx + Math.cos(rad) * 11, hy + Math.sin(rad) * 11, 1.8, 0, Math.PI * 2);
+            ctx.fillStyle = '#1e293b';
+            ctx.fill();
+          }
+
+          ctx.beginPath();
+          ctx.arc(hx, hy, 7, 0, Math.PI * 2);
+          ctx.fillStyle = '#090d14';
+          ctx.fill();
+        });
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.anisotropy = 8;
+        return texture;
+      }
+
+      static createBrushedMetalTexture(baseHex = '#272e3b', lineHex = '#384252') {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = baseHex;
+        ctx.fillRect(0, 0, 256, 256);
+
+        ctx.strokeStyle = lineHex;
+        ctx.lineWidth = 1;
+        for (let y = 0; y < 256; y += 2) {
+          ctx.globalAlpha = 0.25 + Math.random() * 0.35;
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(256, y);
+          ctx.stroke();
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        return texture;
+      }
+
+      static createCPUIHSTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillRect(0, 0, 512, 512);
+
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 10;
+        ctx.strokeRect(16, 16, 480, 480);
+
+        ctx.fillStyle = '#334155';
+        ctx.font = 'bold 34px Inter, sans-serif';
+        ctx.fillText('intel', 76, 120);
+        ctx.font = 'bold 28px Inter, sans-serif';
+        ctx.fillText('CORE™ i9', 76, 165);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.anisotropy = 8;
+        return texture;
+      }
+
+      static createFanHubTexture(brand = 'INTEL', sub = 'PWM COOLER') {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, 256, 256);
+
+        ctx.strokeStyle = '#0ea5e9';
+        ctx.lineWidth = 10;
+        ctx.beginPath();
+        ctx.arc(128, 128, 114, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = 'bold 34px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(brand, 128, 116);
+
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = 'bold 18px monospace';
+        ctx.fillText(sub, 128, 148);
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '600 14px monospace';
+        ctx.fillText('DC 12V • PWM', 128, 174);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.anisotropy = 8;
+        return texture;
+      }
+
+      /**
+       * Tekstur Stiker Spesifikasi PSU 850W 80+ Gold Fully Modular.
+       */
+      static createPSULabelTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, 512, 256);
+
+        ctx.fillStyle = '#f59e0b';
+        ctx.fillRect(0, 0, 512, 18);
+        ctx.fillRect(0, 238, 512, 18);
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = 'bold 38px Inter, sans-serif';
+        ctx.fillText('RM850x SHIFT', 28, 86);
+
+        ctx.fillStyle = '#fbbf24';
+        ctx.font = 'bold 24px monospace';
+        ctx.fillText('850W • 80 PLUS® GOLD', 28, 126);
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '600 16px monospace';
+        ctx.fillText('ATX 3.1 • FULLY MODULAR PSU', 28, 162);
+        ctx.fillText('AC INPUT: 100-240V ~ 10A 50/60Hz', 28, 192);
+
+        // Badge Gold di kanan
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(380, 48, 102, 150);
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(380, 48, 102, 150);
+
+        ctx.fillStyle = '#fbbf24';
+        ctx.font = 'bold 28px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('80', 431, 102);
+        ctx.font = 'bold 16px monospace';
+        ctx.fillText('PLUS', 431, 130);
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillText('GOLD', 431, 164);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.anisotropy = 8;
+        return texture;
+      }
+
+      /**
+       * Tekstur Mesh Ventilasi Honeycomb Casing & PSU.
+       */
+      static createMeshVentTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#111827';
+        ctx.fillRect(0, 0, 256, 256);
+
+        ctx.fillStyle = '#030712';
+        for (let y = 8; y < 256; y += 16) {
+          const offset = (y / 16) % 2 === 0 ? 0 : 8;
+          for (let x = 8 + offset; x < 256; x += 16) {
+            ctx.beginPath();
+            ctx.arc(x, y, 5.2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(3, 3);
+        return texture;
+      }
+
+      /**
+       * Tekstur Matras Anti-Statis (ESD Mat) untuk Meja Kerja Teknisi.
+       */
+      static createESDMatTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1280;
+        canvas.height = 960;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#162032';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.12)';
+        ctx.lineWidth = 1.5;
+        const step = 32;
+        for (let x = 0; x <= canvas.width; x += step) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, canvas.height);
+          ctx.stroke();
+        }
+        for (let y = 0; y <= canvas.height; y += step) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(canvas.width, y);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+        ctx.lineWidth = 6;
+        ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
+        ctx.font = 'bold 18px monospace';
+        ctx.fillText('ESD SAFE WORKBENCH MAT • ANTI-STATIC SYSTEM ASSEMBLY', 44, canvas.height - 38);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.anisotropy = 8;
+        return texture;
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 2. MODEL LENGKAP MOTHERBOARD INTEL ATX + CPU COOLER FAN + RAM + M.2 + GPU
+     * ============================================================================
+     */
+    class MotherboardComplete3D {
+      constructor() {
+        this.group = new THREE.Group();
+        this.group.name = 'Intel_ATX_Complete_Motherboard';
+
+        this.dimensions = {
+          width: 24.4,
+          length: 30.5,
+          thickness: 0.24
+        };
+
+        this.anchors = {
+          cpu: new THREE.Vector3(-1.5, 0.22, -7.2),
+          cpuFanHeader: new THREE.Vector3(2.45, 0.22, -10.6),
+          ram: [
+            new THREE.Vector3(3.8, 0.25, -7.2),
+            new THREE.Vector3(4.8, 0.25, -7.2),
+            new THREE.Vector3(5.8, 0.25, -7.2),
+            new THREE.Vector3(6.8, 0.25, -7.2)
+          ],
+          ssd: new THREE.Vector3(-1.4, 0.24, -1.6),
+          gpu: new THREE.Vector3(-1.2, 0.28, 1.6)
+        };
+
+        // 9 Koordinat Lubang Baut Standoff Motherboard ATX
+        this.mountingHoleCoords = [
+          [-11.0, -14.0], [0.0, -14.0], [10.8, -14.0],
+          [-11.0,   0.0], [0.0,   0.0], [10.8,   0.0],
+          [-11.0,  14.0], [0.0,  14.0], [10.8,  14.0]
+        ];
+
+        this.draggableMeshes = [];
+        this.mountingScrews = [];
+        this.screwsTightened = false;
+        this.fanRotor = null;
+
+        this._initMaterials();
+        this._buildPCB();
+        this._buildVRMAndIO();
+        this._buildInstalledCPUAndCoolerSystem();
+        this._buildRAMSlotsWithModules();
+        this._buildM2SlotWithHeatsink();
+        this._buildPCIeSlotsMechanism();
+        this._buildInstalledGPUSystem();
+        this._buildPowerAndChipsetDetails();
+        this._buildMountingScrews();
+        this._buildSelectionHighlight();
+      }
+
+      _registerClickable(mesh) {
+        this.draggableMeshes.push(mesh);
+      }
+
+      _initMaterials() {
+        const pcbTex = ProceduralTextures.createPCBTexture();
+        const darkMetalTex = ProceduralTextures.createBrushedMetalTexture('#232a36', '#334155');
+        const silverMetalTex = ProceduralTextures.createBrushedMetalTexture('#94a3b8', '#cbd5e1');
+
+        this.materials = {
+          pcbTop: new THREE.MeshStandardMaterial({
+            map: pcbTex,
+            roughness: 0.48,
+            metalness: 0.15
+          }),
+          pcbEdge: new THREE.MeshStandardMaterial({
+            color: '#1e293b',
+            roughness: 0.6,
+            metalness: 0.2
+          }),
+          heatsinkDark: new THREE.MeshStandardMaterial({
+            map: darkMetalTex,
+            roughness: 0.35,
+            metalness: 0.78
+          }),
+          heatsinkSilver: new THREE.MeshStandardMaterial({
+            map: silverMetalTex,
+            roughness: 0.28,
+            metalness: 0.85
+          }),
+          chromeSteel: new THREE.MeshStandardMaterial({
+            color: '#d1d5db',
+            roughness: 0.22,
+            metalness: 0.92
+          }),
+          copper: new THREE.MeshStandardMaterial({
+            color: '#d97706',
+            roughness: 0.22,
+            metalness: 0.92
+          }),
+          darkPlastic: new THREE.MeshStandardMaterial({
+            color: '#18181b',
+            roughness: 0.55,
+            metalness: 0.08
+          }),
+          grayPlastic: new THREE.MeshStandardMaterial({
+            color: '#475569',
+            roughness: 0.5,
+            metalness: 0.1
+          }),
+          goldPin: new THREE.MeshStandardMaterial({
+            color: '#fbbf24',
+            roughness: 0.22,
+            metalness: 0.95
+          }),
+          accentCyan: new THREE.MeshStandardMaterial({
+            color: '#0ea5e9',
+            emissive: '#0284c7',
+            emissiveIntensity: 0.35,
+            roughness: 0.3,
+            metalness: 0.4
+          })
+        };
+      }
+
+      _buildPCB() {
+        const { width, length, thickness } = this.dimensions;
+        const geo = new THREE.BoxGeometry(width, thickness, length);
+        const materials = [
+          this.materials.pcbEdge,
+          this.materials.pcbEdge,
+          this.materials.pcbTop,
+          this.materials.pcbEdge,
+          this.materials.pcbEdge,
+          this.materials.pcbEdge
+        ];
+        const pcbMesh = new THREE.Mesh(geo, materials);
+        pcbMesh.position.y = -thickness / 2;
+        pcbMesh.receiveShadow = true;
+        pcbMesh.castShadow = true;
+        this.group.add(pcbMesh);
+        this._registerClickable(pcbMesh);
+
+        const backplate = new THREE.Mesh(
+          new THREE.BoxGeometry(5.4, 0.14, 5.4),
+          this.materials.chromeSteel
+        );
+        backplate.position.set(this.anchors.cpu.x, -thickness - 0.07, this.anchors.cpu.z);
+        this.group.add(backplate);
+      }
+
+      _buildVRMAndIO() {
+        const vrmGroup = new THREE.Group();
+
+        const ioBase = new THREE.Mesh(
+          new THREE.BoxGeometry(4.4, 2.3, 13.8),
+          this.materials.heatsinkDark
+        );
+        ioBase.position.set(-9.8, 1.15, -7.8);
+        ioBase.castShadow = true;
+        ioBase.receiveShadow = true;
+        vrmGroup.add(ioBase);
+        this._registerClickable(ioBase);
+
+        const ioTopPlate = new THREE.Mesh(
+          new THREE.BoxGeometry(3.8, 0.25, 13.2),
+          this.materials.heatsinkSilver
+        );
+        ioTopPlate.position.set(-9.6, 2.42, -7.8);
+        vrmGroup.add(ioTopPlate);
+        this._registerClickable(ioTopPlate);
+
+        const ioAccentStrip = new THREE.Mesh(
+          new THREE.BoxGeometry(0.18, 0.08, 11.5),
+          this.materials.accentCyan
+        );
+        ioAccentStrip.position.set(-8.2, 2.56, -7.8);
+        vrmGroup.add(ioAccentStrip);
+
+        const portOffsets = [-13.2, -11.4, -9.6, -7.6, -5.6, -3.5];
+        portOffsets.forEach((pz, idx) => {
+          const portHousing = new THREE.Mesh(
+            new THREE.BoxGeometry(0.6, 1.35, 1.35),
+            idx === 3 ? this.materials.accentCyan : this.materials.chromeSteel
+          );
+          portHousing.position.set(-12.05, 0.85, pz);
+          vrmGroup.add(portHousing);
+          this._registerClickable(portHousing);
+        });
+
+        const topVrm = new THREE.Mesh(
+          new THREE.BoxGeometry(8.8, 1.75, 2.4),
+          this.materials.heatsinkDark
+        );
+        topVrm.position.set(-1.5, 0.875, -12.6);
+        topVrm.castShadow = true;
+        topVrm.receiveShadow = true;
+        vrmGroup.add(topVrm);
+        this._registerClickable(topVrm);
+
+        for (let i = 0; i < 6; i++) {
+          const fin = new THREE.Mesh(
+            new THREE.BoxGeometry(8.6, 0.18, 0.16),
+            this.materials.heatsinkSilver
+          );
+          fin.position.set(-1.5, 1.82, -13.5 + i * 0.36);
+          vrmGroup.add(fin);
+        }
+
+        const chokeGeo = new THREE.BoxGeometry(0.75, 0.55, 0.75);
+        const capGeo = new THREE.CylinderGeometry(0.24, 0.24, 0.65, 16);
+
+        for (let i = 0; i < 7; i++) {
+          const cz = -10.5 + i * 1.05;
+          const choke = new THREE.Mesh(chokeGeo, this.materials.grayPlastic);
+          choke.position.set(-6.4, 0.275, cz);
+          vrmGroup.add(choke);
+
+          const cap = new THREE.Mesh(capGeo, this.materials.chromeSteel);
+          cap.position.set(-5.45, 0.325, cz);
+          vrmGroup.add(cap);
+        }
+
+        for (let i = 0; i < 6; i++) {
+          const cx = -4.5 + i * 1.15;
+          const choke = new THREE.Mesh(chokeGeo, this.materials.grayPlastic);
+          choke.position.set(cx, 0.275, -10.7);
+          vrmGroup.add(choke);
+
+          const cap = new THREE.Mesh(capGeo, this.materials.chromeSteel);
+          cap.position.set(cx, 0.325, -9.85);
+          vrmGroup.add(cap);
+        }
+
+        this.group.add(vrmGroup);
+      }
+
+      _buildInstalledCPUAndCoolerSystem() {
+        const socketRoot = new THREE.Group();
+        socketRoot.position.set(this.anchors.cpu.x, 0, this.anchors.cpu.z);
+
+        const baseFrame = new THREE.Mesh(
+          new THREE.BoxGeometry(4.7, 0.22, 4.9),
+          this.materials.darkPlastic
+        );
+        baseFrame.position.y = 0.11;
+        socketRoot.add(baseFrame);
+
+        const ihsTex = ProceduralTextures.createCPUIHSTexture();
+        const ihsMat = new THREE.MeshStandardMaterial({
+          map: ihsTex,
+          roughness: 0.24,
+          metalness: 0.88
+        });
+        const cpuIHS = new THREE.Mesh(new THREE.BoxGeometry(3.15, 0.16, 3.68), ihsMat);
+        cpuIHS.position.y = 0.38;
+        socketRoot.add(cpuIHS);
+
+        const coolerGroup = new THREE.Group();
+        coolerGroup.position.y = 0.46;
+
+        const copperBase = new THREE.Mesh(
+          new THREE.CylinderGeometry(1.75, 1.75, 0.24, 32),
+          this.materials.copper
+        );
+        copperBase.position.y = 0.12;
+        coolerGroup.add(copperBase);
+        this._registerClickable(copperBase);
+
+        const heatsinkCore = new THREE.Mesh(
+          new THREE.CylinderGeometry(1.55, 1.55, 1.25, 24),
+          this.materials.heatsinkSilver
+        );
+        heatsinkCore.position.y = 0.85;
+        coolerGroup.add(heatsinkCore);
+
+        for (let i = 0; i < 36; i++) {
+          const angle = (i / 36) * Math.PI * 2;
+          const fin = new THREE.Mesh(
+            new THREE.BoxGeometry(1.65, 1.18, 0.06),
+            i % 2 === 0 ? this.materials.heatsinkDark : this.materials.heatsinkSilver
+          );
+          fin.position.set(Math.cos(angle) * 2.25, 0.85, Math.sin(angle) * 2.25);
+          fin.rotation.y = -angle;
+          fin.castShadow = true;
+          coolerGroup.add(fin);
+        }
+
+        const shroudRing = new THREE.Mesh(
+          new THREE.TorusGeometry(3.12, 0.24, 16, 48),
+          this.materials.darkPlastic
+        );
+        shroudRing.rotation.x = Math.PI / 2;
+        shroudRing.position.y = 1.68;
+        shroudRing.castShadow = true;
+        coolerGroup.add(shroudRing);
+        this._registerClickable(shroudRing);
+
+        const ledAccentRing = new THREE.Mesh(
+          new THREE.TorusGeometry(3.12, 0.07, 12, 48),
+          this.materials.accentCyan
+        );
+        ledAccentRing.rotation.x = Math.PI / 2;
+        ledAccentRing.position.y = 1.88;
+        coolerGroup.add(ledAccentRing);
+
+        const hubTex = ProceduralTextures.createFanHubTexture();
+        this.fanRotor = new THREE.Group();
+        this.fanRotor.position.y = 1.68;
+
+        const hubCylinder = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.95, 0.95, 0.34, 28),
+          this.materials.darkPlastic
+        );
+        const hubLabel = new THREE.Mesh(
+          new THREE.CircleGeometry(0.88, 28),
+          new THREE.MeshStandardMaterial({ map: hubTex, roughness: 0.3 })
+        );
+        hubLabel.rotation.x = -Math.PI / 2;
+        hubLabel.position.y = 0.175;
+        this.fanRotor.add(hubCylinder, hubLabel);
+        this._registerClickable(hubCylinder);
+        this._registerClickable(hubLabel);
+
+        for (let b = 0; b < 9; b++) {
+          const bAngle = (b / 9) * Math.PI * 2;
+          const bladePivot = new THREE.Group();
+          bladePivot.rotation.y = bAngle;
+          const blade = new THREE.Mesh(
+            new THREE.BoxGeometry(1.95, 0.05, 0.56),
+            this.materials.grayPlastic
+          );
+          blade.position.set(1.85, 0, 0);
+          blade.rotation.x = 0.42;
+          bladePivot.add(blade);
+          this.fanRotor.add(bladePivot);
+        }
+        coolerGroup.add(this.fanRotor);
+
+        [
+          [-3.1, -3.1], [3.1, -3.1],
+          [-3.1,  3.1], [3.1,  3.1]
+        ].forEach(([cx, cz]) => {
+          const angleToCorner = Math.atan2(cz, cx);
+          const arm = new THREE.Mesh(
+            new THREE.BoxGeometry(1.85, 0.14, 0.56),
+            this.materials.heatsinkDark
+          );
+          arm.position.set(cx * 0.78, 0.36, cz * 0.78);
+          arm.rotation.y = -angleToCorner;
+
+          const pinCap = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.32, 0.32, 0.24, 18),
+            this.materials.darkPlastic
+          );
+          pinCap.position.set(cx, 0.54, cz);
+          coolerGroup.add(arm, pinCap);
+          this._registerClickable(pinCap);
+        });
+
+        socketRoot.add(coolerGroup);
+        this.group.add(socketRoot);
+
+        const hdrPos = this.anchors.cpuFanHeader;
+        const fanHeader = new THREE.Mesh(
+          new THREE.BoxGeometry(1.12, 0.48, 0.48),
+          this.materials.darkPlastic
+        );
+        fanHeader.position.set(hdrPos.x, 0.24, hdrPos.z);
+        this.group.add(fanHeader);
+
+        const pwmCurve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(this.anchors.cpu.x + 2.25, 1.55, this.anchors.cpu.z - 2.25),
+          new THREE.Vector3(this.anchors.cpu.x + 3.10, 1.85, this.anchors.cpu.z - 3.10),
+          new THREE.Vector3(hdrPos.x, 0.55, hdrPos.z)
+        ]);
+        const pwmCableMesh = new THREE.Mesh(
+          new THREE.TubeGeometry(pwmCurve, 18, 0.08, 8, false),
+          this.materials.darkPlastic
+        );
+        this.group.add(pwmCableMesh);
+      }
+
+      _buildRAMSlotsWithModules() {
+        const ramGroup = new THREE.Group();
+        const slotLength = 13.4;
+        const slotWidth = 0.62;
+        const slotHeight = 0.72;
+
+        this.anchors.ram.forEach((anchor, idx) => {
+          const singleSlot = new THREE.Group();
+          singleSlot.position.set(anchor.x, 0, anchor.z);
+
+          const housingMat = idx % 2 === 0 ? this.materials.grayPlastic : this.materials.darkPlastic;
+          const slotBody = new THREE.Mesh(
+            new THREE.BoxGeometry(slotWidth, slotHeight, slotLength),
+            housingMat
+          );
+          slotBody.position.y = slotHeight / 2;
+          slotBody.castShadow = true;
+
+          const topLatch = new THREE.Mesh(
+            new THREE.BoxGeometry(0.68, 0.95, 0.42),
+            this.materials.chromeSteel
+          );
+          topLatch.position.set(0, 0.67, -slotLength / 2 - 0.13);
+
+          const botLatch = new THREE.Mesh(
+            new THREE.BoxGeometry(0.68, 0.95, 0.42),
+            this.materials.chromeSteel
+          );
+          botLatch.position.set(0, 0.67, slotLength / 2 + 0.13);
+
+          const ramHeatsink = new THREE.Mesh(
+            new THREE.BoxGeometry(0.36, 2.35, slotLength - 0.35),
+            this.materials.heatsinkDark
+          );
+          ramHeatsink.position.y = 1.65;
+          ramHeatsink.castShadow = true;
+
+          const ramDiffuser = new THREE.Mesh(
+            new THREE.BoxGeometry(0.28, 0.24, slotLength - 0.45),
+            this.materials.accentCyan
+          );
+          ramDiffuser.position.y = 2.92;
+
+          singleSlot.add(slotBody, topLatch, botLatch, ramHeatsink, ramDiffuser);
+          this._registerClickable(ramHeatsink);
+          ramGroup.add(singleSlot);
+        });
+
+        this.group.add(ramGroup);
+      }
+
+      _buildM2SlotWithHeatsink() {
+        const m2Group = new THREE.Group();
+        const { x, z } = this.anchors.ssd;
+
+        const connector = new THREE.Mesh(
+          new THREE.BoxGeometry(0.65, 0.42, 2.35),
+          this.materials.darkPlastic
+        );
+        connector.position.set(x - 4.0, 0.21, z);
+
+        const hsBody = new THREE.Mesh(
+          new THREE.BoxGeometry(8.5, 0.34, 2.35),
+          this.materials.heatsinkDark
+        );
+        hsBody.position.set(x, 0.63, z);
+        hsBody.castShadow = true;
+
+        const hsTop = new THREE.Mesh(
+          new THREE.BoxGeometry(7.8, 0.08, 1.6),
+          this.materials.heatsinkSilver
+        );
+        hsTop.position.set(x, 0.82, z);
+
+        m2Group.add(connector, hsBody, hsTop);
+        this._registerClickable(hsBody);
+        this.group.add(m2Group);
+      }
+
+      _buildPCIeSlotsMechanism() {
+        const pcieGroup = new THREE.Group();
+        const { x, z } = this.anchors.gpu;
+        const slotLen = 13.8;
+
+        const x16Group = new THREE.Group();
+        x16Group.position.set(x, 0, z);
+
+        const innerPlastic = new THREE.Mesh(
+          new THREE.BoxGeometry(slotLen, 0.68, 0.72),
+          this.materials.darkPlastic
+        );
+        innerPlastic.position.y = 0.34;
+
+        const steelArmor = new THREE.Mesh(
+          new THREE.BoxGeometry(slotLen + 0.16, 0.64, 0.84),
+          this.materials.chromeSteel
+        );
+        steelArmor.position.y = 0.32;
+        steelArmor.castShadow = true;
+
+        const pciePins = new THREE.Mesh(
+          new THREE.BoxGeometry(slotLen - 0.5, 0.12, 0.22),
+          this.materials.goldPin
+        );
+        pciePins.position.y = 0.64;
+
+        x16Group.add(innerPlastic, steelArmor, pciePins);
+        pcieGroup.add(x16Group);
+
+        const extraSlots = [
+          { len: 2.6, posX: -6.8, posZ: 4.6 },
+          { len: 13.8, posX: -1.2, posZ: 7.4 },
+          { len: 2.6, posX: -6.8, posZ: 10.2 }
+        ];
+        extraSlots.forEach((sl) => {
+          const sMesh = new THREE.Mesh(
+            new THREE.BoxGeometry(sl.len, 0.62, 0.72),
+            this.materials.darkPlastic
+          );
+          sMesh.position.set(sl.posX, 0.31, sl.posZ);
+          const sPins = new THREE.Mesh(
+            new THREE.BoxGeometry(sl.len - 0.35, 0.1, 0.2),
+            this.materials.goldPin
+          );
+          sPins.position.set(sl.posX, 0.58, sl.posZ);
+          pcieGroup.add(sMesh, sPins);
+        });
+
+        this.group.add(pcieGroup);
+      }
+
+      _buildInstalledGPUSystem() {
+        const yOff = 0.24;
+        const { z } = this.anchors.gpu;
+        const gpuRoot = new THREE.Group();
+        gpuRoot.position.set(0, yOff, z);
+
+        const gpuLength = 22.4;
+        const gpuCenterX = -1.0;
+        const gpuHeight = 5.2;
+        const gpuBaseY = 0.72;
+
+        const pcieFinger = new THREE.Mesh(
+          new THREE.BoxGeometry(11.6, 0.42, 0.16),
+          this.materials.goldPin
+        );
+        pcieFinger.position.set(-1.4, 0.56, 0);
+        gpuRoot.add(pcieFinger);
+
+        const rearBracket = new THREE.Mesh(
+          new THREE.BoxGeometry(0.18, 5.5, 1.45),
+          this.materials.chromeSteel
+        );
+        rearBracket.position.set(-12.22, gpuBaseY + gpuHeight / 2 - 0.15, 0.52);
+        rearBracket.castShadow = true;
+        gpuRoot.add(rearBracket);
+        this._registerClickable(rearBracket);
+
+        [-0.05, 0.35, 0.75, 1.08].forEach((pz, idx) => {
+          const dispPort = new THREE.Mesh(
+            new THREE.BoxGeometry(0.24, 0.72, 0.24),
+            idx === 3 ? this.materials.accentCyan : this.materials.darkPlastic
+          );
+          dispPort.position.set(-12.28, gpuBaseY + 2.5, pz);
+          gpuRoot.add(dispPort);
+        });
+
+        const gpuPCB = new THREE.Mesh(
+          new THREE.BoxGeometry(gpuLength, gpuHeight - 0.25, 0.16),
+          this.materials.darkPlastic
+        );
+        gpuPCB.position.set(gpuCenterX, gpuBaseY + gpuHeight / 2, -0.05);
+        gpuPCB.castShadow = true;
+        gpuRoot.add(gpuPCB);
+        this._registerClickable(gpuPCB);
+
+        const backplate = new THREE.Mesh(
+          new THREE.BoxGeometry(gpuLength + 0.1, gpuHeight - 0.15, 0.14),
+          this.materials.heatsinkDark
+        );
+        backplate.position.set(gpuCenterX, gpuBaseY + gpuHeight / 2, -0.20);
+        backplate.castShadow = true;
+        backplate.receiveShadow = true;
+        gpuRoot.add(backplate);
+        this._registerClickable(backplate);
+
+        const bpAccent = new THREE.Mesh(
+          new THREE.BoxGeometry(gpuLength - 2.2, 0.45, 0.05),
+          this.materials.heatsinkSilver
+        );
+        bpAccent.position.set(gpuCenterX + 0.4, gpuBaseY + gpuHeight - 0.85, -0.29);
+
+        const bpCyanStrip = new THREE.Mesh(
+          new THREE.BoxGeometry(9.5, 0.12, 0.05),
+          this.materials.accentCyan
+        );
+        bpCyanStrip.position.set(-2.5, gpuBaseY + gpuHeight + 0.02, 0.85);
+        gpuRoot.add(bpAccent, bpCyanStrip);
+
+        const heatsinkBlock = new THREE.Mesh(
+          new THREE.BoxGeometry(gpuLength - 0.6, gpuHeight - 0.45, 1.35),
+          this.materials.heatsinkSilver
+        );
+        heatsinkBlock.position.set(gpuCenterX, gpuBaseY + gpuHeight / 2, 0.72);
+        heatsinkBlock.castShadow = true;
+        gpuRoot.add(heatsinkBlock);
+        this._registerClickable(heatsinkBlock);
+
+        [-0.7, 0.7].forEach((hyOff) => {
+          const heatpipe = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.14, 0.14, gpuLength - 1.4, 14),
+            this.materials.copper
+          );
+          heatpipe.rotation.z = Math.PI / 2;
+          heatpipe.position.set(gpuCenterX, gpuBaseY + gpuHeight / 2 + hyOff, 1.38);
+          gpuRoot.add(heatpipe);
+        });
+
+        const shroudBody = new THREE.Mesh(
+          new THREE.BoxGeometry(gpuLength + 0.15, gpuHeight, 0.78),
+          this.materials.heatsinkDark
+        );
+        shroudBody.position.set(gpuCenterX, gpuBaseY + gpuHeight / 2, 1.78);
+        shroudBody.castShadow = true;
+        shroudBody.receiveShadow = true;
+        gpuRoot.add(shroudBody);
+        this._registerClickable(shroudBody);
+
+        [-7.6, -1.0, 5.6].forEach((fx) => {
+          const fanWell = new THREE.Mesh(
+            new THREE.CylinderGeometry(2.15, 2.15, 0.14, 28),
+            this.materials.darkPlastic
+          );
+          fanWell.rotation.x = Math.PI / 2;
+          fanWell.position.set(fx, gpuBaseY + gpuHeight / 2, 2.14);
+
+          const fanRim = new THREE.Mesh(
+            new THREE.TorusGeometry(2.12, 0.11, 10, 32),
+            this.materials.heatsinkSilver
+          );
+          fanRim.position.set(fx, gpuBaseY + gpuHeight / 2, 2.20);
+
+          const fanHub = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.62, 0.62, 0.20, 20),
+            this.materials.darkPlastic
+          );
+          fanHub.rotation.x = Math.PI / 2;
+          fanHub.position.set(fx, gpuBaseY + gpuHeight / 2, 2.18);
+
+          gpuRoot.add(fanWell, fanRim, fanHub);
+          this._registerClickable(fanWell);
+
+          for (let b = 0; b < 9; b++) {
+            const bAngle = (b / 9) * Math.PI * 2;
+            const blade = new THREE.Mesh(
+              new THREE.BoxGeometry(1.38, 0.36, 0.05),
+              this.materials.grayPlastic
+            );
+            blade.position.set(
+              fx + Math.cos(bAngle) * 1.25,
+              gpuBaseY + gpuHeight / 2 + Math.sin(bAngle) * 1.25,
+              2.16
+            );
+            blade.rotation.z = bAngle;
+            blade.rotation.y = 0.36;
+            gpuRoot.add(blade);
+          }
+        });
+
+        const pwr16Pin = new THREE.Mesh(
+          new THREE.BoxGeometry(1.65, 0.55, 0.95),
+          this.materials.darkPlastic
+        );
+        pwr16Pin.position.set(3.2, gpuBaseY + gpuHeight + 0.18, 0.85);
+        gpuRoot.add(pwr16Pin);
+        this._registerClickable(pwr16Pin);
+
+        this.group.add(gpuRoot);
+      }
+
+      _buildPowerAndChipsetDetails() {
+        const yOff = 0.24;
+        const details = new THREE.Group();
+
+        const atx24 = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1.35, 5.2), this.materials.darkPlastic);
+        atx24.position.set(10.8, yOff + 0.675, -5.2);
+        atx24.castShadow = true;
+        details.add(atx24);
+
+        [-7.2, -5.1].forEach((cx) => {
+          const cpuPwr = new THREE.Mesh(new THREE.BoxGeometry(1.85, 1.35, 1.15), this.materials.darkPlastic);
+          cpuPwr.position.set(cx, yOff + 0.675, -14.1);
+          cpuPwr.castShadow = true;
+          details.add(cpuPwr);
+        });
+
+        const pchBase = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.72, 6.2), this.materials.heatsinkDark);
+        pchBase.position.set(5.6, yOff + 0.36, 6.6);
+        pchBase.castShadow = true;
+        const pchTop = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.16, 5.4), this.materials.heatsinkSilver);
+        pchTop.position.set(5.6, yOff + 0.78, 6.6);
+        const pchAccent = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.06, 0.22), this.materials.accentCyan);
+        pchAccent.position.set(5.6, yOff + 0.88, 8.2);
+        details.add(pchBase, pchTop, pchAccent);
+        this._registerClickable(pchBase);
+
+        const cmosHolder = new THREE.Mesh(new THREE.CylinderGeometry(1.18, 1.18, 0.35, 24), this.materials.darkPlastic);
+        cmosHolder.position.set(1.3, yOff + 0.175, 4.6);
+        const cmosBattery = new THREE.Mesh(new THREE.CylinderGeometry(0.98, 0.98, 0.16, 24), this.materials.chromeSteel);
+        cmosBattery.position.set(1.3, yOff + 0.36, 4.6);
+        details.add(cmosHolder, cmosBattery);
+
+        [10.2, 12.1].forEach((sz) => {
+          const sataBlock = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.15, 1.65), this.materials.darkPlastic);
+          sataBlock.position.set(11.3, yOff + 0.575, sz);
+          details.add(sataBlock);
+        });
+
+        [-3.5, 0.5, 4.2, 7.8].forEach((hx, i) => {
+          const hdr = new THREE.Mesh(new THREE.BoxGeometry(i === 3 ? 2.4 : 1.6, 0.65, 0.75), this.materials.darkPlastic);
+          hdr.position.set(hx, yOff + 0.325, 14.35);
+          details.add(hdr);
+        });
+
+        this.group.add(details);
+      }
+
+      /**
+       * 9 Baut Pengunci Motherboard ke Standoff Casing (muncul & mengencang saat diklik).
+       */
+      _buildMountingScrews() {
+        const screwMat = new THREE.MeshStandardMaterial({
+          color: '#e2e8f0',
+          roughness: 0.22,
+          metalness: 0.95
+        });
+        const slotMat = new THREE.MeshBasicMaterial({ color: '#0f172a' });
+
+        this.mountingHoleCoords.forEach(([hx, hz]) => {
+          const screwGroup = new THREE.Group();
+          screwGroup.position.set(hx, 0.95, hz);
+          screwGroup.visible = false;
+
+          const head = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.12, 16), screwMat);
+          const cross1 = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.03, 0.05), slotMat);
+          cross1.position.y = 0.065;
+          const cross2 = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.03, 0.32), slotMat);
+          cross2.position.y = 0.065;
+
+          screwGroup.add(head, cross1, cross2);
+          this.group.add(screwGroup);
+          this.mountingScrews.push(screwGroup);
+        });
+      }
+
+      _buildSelectionHighlight() {
+        this.selectionRing = new THREE.LineSegments(
+          new THREE.EdgesGeometry(new THREE.BoxGeometry(25.0, 6.6, 31.1)),
+          new THREE.LineBasicMaterial({ color: '#facc15', transparent: true, opacity: 0.95 })
+        );
+        this.selectionRing.position.y = 3.3;
+        this.group.add(this.selectionRing);
+      }
+
+      setSelected(isSelected) {
+        this.selectionRing.visible = isSelected;
+      }
+
+      update(dt) {
+        if (this.screwsTightened) {
+          const lerpSpeed = Math.min(1, dt * 14);
+          this.mountingScrews.forEach((sc) => {
+            sc.visible = true;
+            sc.position.y += (0.30 - sc.position.y) * lerpSpeed;
+            sc.rotation.y += (Math.PI * 2 - sc.rotation.y) * lerpSpeed;
+          });
+        } else {
+          this.mountingScrews.forEach((sc) => {
+            sc.visible = false;
+            sc.position.y = 0.95;
+            sc.rotation.y = 0;
+          });
+        }
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 3. MODEL 3D PSU (POWER SUPPLY UNIT) LENGKAP DENGAN KABEL MODULAR
+     * ============================================================================
+     */
+    class PowerSupply3D {
+      constructor() {
+        this.group = new THREE.Group();
+        this.group.name = 'ATX_850W_Gold_Modular_PSU';
+
+        this.dimensions = {
+          widthX: 11.4,
+          heightY: 6.2,
+          depthZ: 8.6
+        };
+
+        this.draggableMeshes = [];
+        this.rearScrews = [];
+        this.screwsTightened = false;
+        this.isInstalledInCase = false;
+
+        this._initMaterials();
+        this._buildChassisAndFanGrille();
+        this._buildRearPowerPanel();
+        this._buildModularCables();
+        this._buildRearMountingScrews();
+        this._buildSelectionHighlight();
+      }
+
+      _registerClickable(mesh) {
+        this.draggableMeshes.push(mesh);
+      }
+
+      _initMaterials() {
+        const brushedDark = ProceduralTextures.createBrushedMetalTexture('#181b22', '#2b3240');
+        const labelTex = ProceduralTextures.createPSULabelTexture();
+        const meshTex = ProceduralTextures.createMeshVentTexture();
+
+        this.materials = {
+          chassis: new THREE.MeshStandardMaterial({
+            map: brushedDark,
+            roughness: 0.38,
+            metalness: 0.82
+          }),
+          label: new THREE.MeshStandardMaterial({
+            map: labelTex,
+            roughness: 0.35,
+            metalness: 0.2
+          }),
+          ventMesh: new THREE.MeshStandardMaterial({
+            map: meshTex,
+            roughness: 0.5,
+            metalness: 0.6
+          }),
+          darkPlastic: new THREE.MeshStandardMaterial({
+            color: '#111827',
+            roughness: 0.55,
+            metalness: 0.1
+          }),
+          chromeSteel: new THREE.MeshStandardMaterial({
+            color: '#cbd5e1',
+            roughness: 0.25,
+            metalness: 0.9
+          }),
+          goldAccent: new THREE.MeshStandardMaterial({
+            color: '#f59e0b',
+            emissive: '#d97706',
+            emissiveIntensity: 0.25,
+            roughness: 0.3
+          }),
+          redSwitch: new THREE.MeshStandardMaterial({
+            color: '#ef4444',
+            emissive: '#991b1b',
+            emissiveIntensity: 0.3,
+            roughness: 0.4
+          }),
+          cableSleeve: new THREE.MeshStandardMaterial({
+            color: '#1e293b',
+            roughness: 0.65,
+            metalness: 0.1
+          }),
+          cableAccent: new THREE.MeshStandardMaterial({
+            color: '#0f172a',
+            roughness: 0.55,
+            metalness: 0.15
+          })
+        };
+      }
+
+      _buildChassisAndFanGrille() {
+        const { widthX, heightY, depthZ } = this.dimensions;
+
+        const body = new THREE.Mesh(
+          new THREE.BoxGeometry(widthX, heightY, depthZ),
+          this.materials.chassis
+        );
+        body.position.y = heightY / 2;
+        body.castShadow = true;
+        body.receiveShadow = true;
+        this.group.add(body);
+        this._registerClickable(body);
+
+        // Bagian muka PSU menghadap ke atas (+Y) ke arah POV pengguna:
+        const fanCenterX = -1.6;
+        const fanRecess = new THREE.Mesh(
+          new THREE.CylinderGeometry(3.2, 3.2, 0.08, 32),
+          this.materials.ventMesh
+        );
+        fanRecess.position.set(fanCenterX, heightY + 0.01, 0);
+        this.group.add(fanRecess);
+        this._registerClickable(fanRecess);
+
+        [1.3, 2.0, 2.65, 3.25].forEach((rad) => {
+          const wireRing = new THREE.Mesh(
+            new THREE.TorusGeometry(rad, 0.045, 8, 36),
+            this.materials.chromeSteel
+          );
+          wireRing.rotation.x = Math.PI / 2;
+          wireRing.position.set(fanCenterX, heightY + 0.06, 0);
+          this.group.add(wireRing);
+        });
+
+        const centerBadge = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.8, 0.8, 0.10, 24),
+          this.materials.goldAccent
+        );
+        centerBadge.position.set(fanCenterX, heightY + 0.07, 0);
+        this.group.add(centerBadge);
+        this._registerClickable(centerBadge);
+
+        const topFacePlate = new THREE.Mesh(
+          new THREE.PlaneGeometry(depthZ - 1.0, 3.6),
+          this.materials.label
+        );
+        topFacePlate.rotation.x = -Math.PI / 2;
+        topFacePlate.rotation.z = Math.PI / 2;
+        topFacePlate.position.set(3.5, heightY + 0.03, 0);
+        this.group.add(topFacePlate);
+        this._registerClickable(topFacePlate);
+
+        const frontLabel = new THREE.Mesh(
+          new THREE.PlaneGeometry(widthX - 1.4, heightY - 1.2),
+          this.materials.label
+        );
+        frontLabel.position.set(0, heightY / 2, depthZ / 2 + 0.02);
+        this.group.add(frontLabel);
+        this._registerClickable(frontLabel);
+      }
+
+      _buildRearPowerPanel() {
+        const { widthX, heightY, depthZ } = this.dimensions;
+        const rearX = -widthX / 2 - 0.02;
+
+        const rearVent = new THREE.Mesh(
+          new THREE.PlaneGeometry(depthZ * 0.52, heightY - 1.1),
+          this.materials.ventMesh
+        );
+        rearVent.rotation.y = -Math.PI / 2;
+        rearVent.position.set(rearX, heightY / 2, -1.6);
+        this.group.add(rearVent);
+
+        const acHousing = new THREE.Mesh(
+          new THREE.BoxGeometry(0.24, 1.45, 2.15),
+          this.materials.darkPlastic
+        );
+        acHousing.position.set(rearX - 0.08, heightY * 0.45, 1.9);
+        this.group.add(acHousing);
+        this._registerClickable(acHousing);
+
+        const switchHousing = new THREE.Mesh(
+          new THREE.BoxGeometry(0.26, 1.25, 0.85),
+          this.materials.darkPlastic
+        );
+        switchHousing.position.set(rearX - 0.08, heightY * 0.72, 1.9);
+
+        const switchRocker = new THREE.Mesh(
+          new THREE.BoxGeometry(0.18, 0.92, 0.56),
+          this.materials.redSwitch
+        );
+        switchRocker.rotation.z = 0.25;
+        switchRocker.position.set(rearX - 0.18, heightY * 0.72, 1.9);
+        this.group.add(switchHousing, switchRocker);
+        this._registerClickable(switchRocker);
+      }
+
+      _buildModularCables() {
+        const { widthX } = this.dimensions;
+        const frontX = widthX / 2;
+
+        const socketSpecs = [
+          { y: 4.4, z: -2.4, w: 0.35, h: 1.1, d: 2.6, label: '24P_ATX' },
+          { y: 4.4, z:  1.4, w: 0.35, h: 1.1, d: 1.8, label: 'CPU_8P' },
+          { y: 2.1, z: -2.2, w: 0.35, h: 1.1, d: 2.0, label: 'PCIE_GPU' },
+          { y: 2.1, z:  1.5, w: 0.35, h: 0.9, d: 1.8, label: 'SATA' }
+        ];
+
+        this.cableGroup = new THREE.Group();
+        this.cableGroup.position.set(frontX, 0, 0);
+
+        socketSpecs.forEach((sp, idx) => {
+          const portBox = new THREE.Mesh(
+            new THREE.BoxGeometry(sp.w, sp.h, sp.d),
+            this.materials.darkPlastic
+          );
+          portBox.position.set(frontX + 0.15, sp.y, sp.z);
+          this.group.add(portBox);
+          this._registerClickable(portBox);
+
+          const plugHead = new THREE.Mesh(
+            new THREE.BoxGeometry(0.75, sp.h * 0.88, sp.d * 0.90),
+            idx === 0 ? this.materials.goldAccent : this.materials.darkPlastic
+          );
+          plugHead.position.set(0.45, sp.y, sp.z);
+          this.cableGroup.add(plugHead);
+          this._registerClickable(plugHead);
+
+          for (let strand = -1; strand <= 1; strand++) {
+            const zOff = sp.z + strand * (sp.d * 0.24);
+            const curve = new THREE.CatmullRomCurve3([
+              new THREE.Vector3(0.65, sp.y, zOff),
+              new THREE.Vector3(2.3, sp.y - 0.45, zOff + strand * 0.35),
+              new THREE.Vector3(3.9, 0.95 + idx * 0.18, zOff + (idx % 2 === 0 ? -1.2 : 1.2)),
+              new THREE.Vector3(3.1, 0.55, zOff + (idx % 2 === 0 ? -2.4 : 2.2))
+            ]);
+
+            const tubeGeo = new THREE.TubeGeometry(curve, 20, idx === 0 ? 0.13 : 0.10, 8, false);
+            const tubeMesh = new THREE.Mesh(
+              tubeGeo,
+              idx === 0 ? this.materials.cableSleeve : this.materials.cableAccent
+            );
+            tubeMesh.castShadow = true;
+            this.cableGroup.add(tubeMesh);
+            this._registerClickable(tubeMesh);
+          }
+
+          const endConnector = new THREE.Mesh(
+            new THREE.BoxGeometry(idx === 0 ? 1.8 : 1.1, 0.48, 0.58),
+            this.materials.darkPlastic
+          );
+          endConnector.position.set(
+            3.1,
+            0.58,
+            sp.z + (idx % 2 === 0 ? -2.4 : 2.2)
+          );
+          this.cableGroup.add(endConnector);
+          this._registerClickable(endConnector);
+        });
+
+        this.group.add(this.cableGroup);
+      }
+
+      /**
+       * 4 Baut Pengunci Panel Belakang PSU (sisi -X) saat terpasang di casing.
+       * Posisi akhir (-widthX / 2 - 0.62) tepat di luar permukaan braket belakang casing
+       * agar terlihat jelas berputar mengencang pada 4 lubang baut PSU.
+       */
+      _buildRearMountingScrews() {
+        const { widthX, heightY, depthZ } = this.dimensions;
+        const screwMat = new THREE.MeshStandardMaterial({
+          color: '#f1f5f9',
+          roughness: 0.2,
+          metalness: 0.95
+        });
+        const slotMat = new THREE.MeshBasicMaterial({ color: '#0f172a' });
+
+        const screwOffsets = [
+          [heightY - 0.65, -depthZ / 2 + 0.65],
+          [heightY - 0.65,  depthZ / 2 - 0.65],
+          [0.65,           -depthZ / 2 + 0.65],
+          [0.65,            depthZ / 2 - 0.65]
+        ];
+
+        screwOffsets.forEach(([sy, sz]) => {
+          const screwGroup = new THREE.Group();
+          screwGroup.position.set(-widthX / 2 - 1.85, sy, sz);
+          screwGroup.visible = false;
+
+          const washer = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.36, 0.36, 0.05, 18),
+            screwMat
+          );
+          washer.rotation.z = Math.PI / 2;
+          washer.position.x = 0.06;
+
+          const head = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.28, 0.30, 0.16, 16),
+            screwMat
+          );
+          head.rotation.z = Math.PI / 2;
+          head.position.x = -0.04;
+
+          const slot1 = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.34, 0.06), slotMat);
+          slot1.position.x = -0.125;
+          const slot2 = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.06, 0.34), slotMat);
+          slot2.position.x = -0.125;
+
+          screwGroup.add(washer, head, slot1, slot2);
+          this.group.add(screwGroup);
+          this.rearScrews.push(screwGroup);
+        });
+      }
+
+      _buildSelectionHighlight() {
+        const { widthX, heightY, depthZ } = this.dimensions;
+        this.selectionRing = new THREE.LineSegments(
+          new THREE.EdgesGeometry(new THREE.BoxGeometry(widthX + 4.4, heightY + 0.7, depthZ + 1.2)),
+          new THREE.LineBasicMaterial({ color: '#facc15', transparent: true, opacity: 0.95 })
+        );
+        this.selectionRing.position.set(1.8, heightY / 2 + 0.2, 0);
+        this.group.add(this.selectionRing);
+      }
+
+      setSelected(isSelected) {
+        this.selectionRing.visible = isSelected;
+      }
+
+      update(dt) {
+        const { widthX } = this.dimensions;
+        const lerpSpeed = Math.min(1, dt * 10);
+
+        const targetCableScaleX = this.isInstalledInCase ? 1.15 : 1.0;
+        this.cableGroup.scale.x += (targetCableScaleX - this.cableGroup.scale.x) * lerpSpeed;
+
+        const targetSeatedX = -widthX / 2 - 0.62;
+        if (this.screwsTightened) {
+          this.rearScrews.forEach((sc) => {
+            sc.visible = true;
+            sc.position.x += (targetSeatedX - sc.position.x) * lerpSpeed;
+            sc.rotation.x += (Math.PI * 4 - sc.rotation.x) * lerpSpeed;
+          });
+        } else {
+          this.rearScrews.forEach((sc) => {
+            sc.visible = false;
+            sc.position.x = -widthX / 2 - 1.85;
+            sc.rotation.x = 0;
+          });
+        }
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 4. MODEL 3D CASING PC ATX MID-TOWER (DITIDURKAN DI TENGAH MEJA)
+     * ============================================================================
+     */
+    class PCCasing3D {
+      constructor() {
+        this.group = new THREE.Group();
+        this.group.name = 'ATX_MidTower_PC_Chassis';
+
+        // Sumbu X: Rear (-13.8) ke Front (+13.8) -> Lebar 27.6
+        // Sumbu Z: Top (-21.2) ke Bottom (+21.2) -> Panjang 42.4
+        // Sumbu Y: Alas luar (0.0) sampai bibir panel kaca atas (9.2)
+        this.dimensions = {
+          widthX: 27.6,
+          heightY: 9.2,
+          lengthZ: 42.4
+        };
+
+        this.mbLocalAnchor = new THREE.Vector3(-1.2, 0.62, -5.2);
+        this.psuLocalAnchor = new THREE.Vector3(-7.6, 0.32, 15.8);
+
+        this.isSystemPowered = false;
+        this.psuBracketClickMeshes = [];
+        this.caseFans = [];
+
+        this._initMaterials();
+        this._buildOuterFrameAndTray();
+        this._buildMotherboardStandoffs();
+        this._buildRearPanelAndIO();
+      }
+
+      _initMaterials() {
+        const brushedCase = ProceduralTextures.createBrushedMetalTexture('#161b26', '#252e3f');
+        const brushedInner = ProceduralTextures.createBrushedMetalTexture('#1e2533', '#2e384b');
+        const meshTex = ProceduralTextures.createMeshVentTexture();
+
+        this.materials = {
+          caseBlack: new THREE.MeshStandardMaterial({
+            map: brushedCase,
+            roughness: 0.42,
+            metalness: 0.78
+          }),
+          steelInner: new THREE.MeshStandardMaterial({
+            map: brushedInner,
+            roughness: 0.35,
+            metalness: 0.85
+          }),
+          psuShroudMat: new THREE.MeshStandardMaterial({
+            color: '#111827',
+            roughness: 0.45,
+            metalness: 0.65
+          }),
+          brassStandoff: new THREE.MeshStandardMaterial({
+            color: '#fbbf24',
+            emissive: '#b45309',
+            emissiveIntensity: 0.18,
+            roughness: 0.25,
+            metalness: 0.92
+          }),
+          meshVent: new THREE.MeshStandardMaterial({
+            map: meshTex,
+            roughness: 0.55,
+            metalness: 0.55
+          }),
+          accentCyan: new THREE.MeshStandardMaterial({
+            color: '#0ea5e9',
+            emissive: '#0284c7',
+            emissiveIntensity: 0.45,
+            roughness: 0.25
+          })
+        };
+      }
+
+      _buildOuterFrameAndTray() {
+        const { widthX, heightY, lengthZ } = this.dimensions;
+
+        // 1. Pelat sisi kanan casing (menjadi alas bawah saat ditidurkan)
+        const baseShell = new THREE.Mesh(
+          new THREE.BoxGeometry(widthX, 0.32, lengthZ),
+          this.materials.caseBlack
+        );
+        baseShell.position.y = 0.16;
+        baseShell.receiveShadow = true;
+        baseShell.castShadow = true;
+        this.group.add(baseShell);
+
+        // 2. Motherboard Tray di bagian dalam casing
+        const mbTray = new THREE.Mesh(
+          new THREE.BoxGeometry(25.2, 0.14, 31.2),
+          this.materials.steelInner
+        );
+        mbTray.position.set(this.mbLocalAnchor.x, 0.38, this.mbLocalAnchor.z);
+        mbTray.receiveShadow = true;
+        this.group.add(mbTray);
+
+        // 3. Dinding Depan Casing (+X) dengan 3 Kipas Intake 120mm
+        const frontX = widthX / 2 - 0.28;
+        const frontWall = new THREE.Mesh(
+          new THREE.BoxGeometry(0.56, heightY, lengthZ),
+          this.materials.caseBlack
+        );
+        frontWall.position.set(frontX, heightY / 2, 0);
+        frontWall.castShadow = true;
+        frontWall.receiveShadow = true;
+        this.group.add(frontWall);
+
+        const frontMesh = new THREE.Mesh(
+          new THREE.PlaneGeometry(lengthZ - 3.0, heightY - 1.4),
+          this.materials.meshVent
+        );
+        frontMesh.rotation.y = Math.PI / 2;
+        frontMesh.position.set(frontX + 0.29, heightY / 2, 0);
+        this.group.add(frontMesh);
+
+        // 3 Kipas Intake Depan Casing
+        const hubTex = ProceduralTextures.createFanHubTexture('NZXT', 'AIRFLOW');
+        [-12.5, -1.5, 9.5].forEach((fz) => {
+          const fanUnit = new THREE.Group();
+          fanUnit.position.set(frontX - 0.35, heightY / 2, fz);
+
+          const frame = new THREE.Mesh(
+            new THREE.BoxGeometry(0.45, 7.2, 7.2),
+            this.materials.psuShroudMat
+          );
+          const ring = new THREE.Mesh(
+            new THREE.TorusGeometry(3.2, 0.10, 10, 32),
+            this.materials.accentCyan
+          );
+          ring.rotation.y = Math.PI / 2;
+
+          const rotor = new THREE.Group();
+          const hub = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.85, 0.85, 0.35, 20),
+            this.materials.psuShroudMat
+          );
+          hub.rotation.z = Math.PI / 2;
+          const hubFace = new THREE.Mesh(
+            new THREE.CircleGeometry(0.8, 20),
+            new THREE.MeshStandardMaterial({ map: hubTex, roughness: 0.3 })
+          );
+          hubFace.rotation.y = -Math.PI / 2;
+          hubFace.position.x = -0.18;
+          rotor.add(hub, hubFace);
+
+          for (let b = 0; b < 7; b++) {
+            const ang = (b / 7) * Math.PI * 2;
+            const blade = new THREE.Mesh(
+              new THREE.BoxGeometry(0.06, 2.1, 0.55),
+              this.materials.steelInner
+            );
+            blade.position.set(0, Math.cos(ang) * 1.85, Math.sin(ang) * 1.85);
+            blade.rotation.x = ang;
+            blade.rotation.y = 0.35;
+            rotor.add(blade);
+          }
+
+          fanUnit.add(frame, ring, rotor);
+          this.group.add(fanUnit);
+          this.caseFans.push(rotor);
+        });
+
+        // 4. Dinding Atas Casing (-Z) & Dinding Bawah Casing (+Z)
+        const topWall = new THREE.Mesh(
+          new THREE.BoxGeometry(widthX, heightY, 0.56),
+          this.materials.caseBlack
+        );
+        topWall.position.set(0, heightY / 2, -lengthZ / 2 + 0.28);
+        topWall.castShadow = true;
+        topWall.receiveShadow = true;
+
+        const topVent = new THREE.Mesh(
+          new THREE.PlaneGeometry(widthX - 4.0, heightY - 2.2),
+          this.materials.meshVent
+        );
+        topVent.rotation.x = -Math.PI / 2;
+        topVent.position.set(0, heightY + 0.01, -lengthZ / 2 + 0.28);
+
+        const bottomWall = new THREE.Mesh(
+          new THREE.BoxGeometry(widthX, heightY, 0.56),
+          this.materials.caseBlack
+        );
+        bottomWall.position.set(0, heightY / 2, lengthZ / 2 - 0.28);
+        bottomWall.castShadow = true;
+        bottomWall.receiveShadow = true;
+
+        this.group.add(topWall, topVent, bottomWall);
+
+        // 5. Sekat Pembatas Ruang PSU (PSU Shroud Divider Wall & Rim) dengan bagian atas terbuka
+        // agar pengguna tetap bisa melihat muka kipas & label PSU dari POV atas!
+        const shroudDivider = new THREE.Mesh(
+          new THREE.BoxGeometry(widthX - 1.2, 6.7, 0.26),
+          this.materials.psuShroudMat
+        );
+        shroudDivider.position.set(0, 3.65, 10.6);
+        shroudDivider.castShadow = true;
+        shroudDivider.receiveShadow = true;
+
+        const shroudLip = new THREE.Mesh(
+          new THREE.BoxGeometry(widthX - 1.2, 0.22, 1.4),
+          this.materials.psuShroudMat
+        );
+        shroudLip.position.set(0, 6.95, 11.2);
+
+        const shroudAccent = new THREE.Mesh(
+          new THREE.BoxGeometry(widthX - 2.0, 0.08, 0.14),
+          this.materials.accentCyan
+        );
+        shroudAccent.position.set(0, 7.08, 10.65);
+
+        this.group.add(shroudDivider, shroudLip, shroudAccent);
+
+        // 6. Bingkai Bibir Tempered Glass di sekeliling atas casing (y = heightY)
+        const rimThick = 0.45;
+        const rimY = heightY - 0.14;
+        const rimTop = new THREE.Mesh(new THREE.BoxGeometry(widthX, 0.28, rimThick), this.materials.caseBlack);
+        rimTop.position.set(0, rimY, -lengthZ / 2 + rimThick / 2);
+        const rimBot = new THREE.Mesh(new THREE.BoxGeometry(widthX, 0.28, rimThick), this.materials.caseBlack);
+        rimBot.position.set(0, rimY, lengthZ / 2 - rimThick / 2);
+        const rimFront = new THREE.Mesh(new THREE.BoxGeometry(rimThick, 0.28, lengthZ), this.materials.caseBlack);
+        rimFront.position.set(widthX / 2 - rimThick / 2, rimY, 0);
+        const rimRear = new THREE.Mesh(new THREE.BoxGeometry(rimThick, 0.28, lengthZ), this.materials.caseBlack);
+        rimRear.position.set(-widthX / 2 + rimThick / 2, rimY, 0);
+        this.group.add(rimTop, rimBot, rimFront, rimRear);
+      }
+
+      _buildMotherboardStandoffs() {
+        const holeCoords = [
+          [-11.0, -14.0], [0.0, -14.0], [10.8, -14.0],
+          [-11.0,   0.0], [0.0,   0.0], [10.8,   0.0],
+          [-11.0,  14.0], [0.0,  14.0], [10.8,  14.0]
+        ];
+
+        holeCoords.forEach(([hx, hz]) => {
+          const standoff = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.28, 0.32, 0.28, 12),
+            this.materials.brassStandoff
+          );
+          standoff.position.set(
+            this.mbLocalAnchor.x + hx,
+            0.48,
+            this.mbLocalAnchor.z + hz
+          );
+          this.group.add(standoff);
+        });
+
+        // Bingkai panduan pemasangan Motherboard saat di-drag
+        this.mbGuideBox = new THREE.LineSegments(
+          new THREE.EdgesGeometry(new THREE.BoxGeometry(24.8, 0.8, 30.8)),
+          new THREE.LineBasicMaterial({ color: '#38bdf8', transparent: true, opacity: 0.0 })
+        );
+        this.mbGuideBox.position.set(this.mbLocalAnchor.x, 0.85, this.mbLocalAnchor.z);
+        this.group.add(this.mbGuideBox);
+      }
+
+      _buildRearPanelAndIO() {
+        const { widthX, heightY, lengthZ } = this.dimensions;
+        const rearX = -widthX / 2 + 0.22;
+
+        // 1. Bagian panel belakang di sisi atas (-Z) sebelum lubang Rear I/O
+        const rearTopSection = new THREE.Mesh(
+          new THREE.BoxGeometry(0.44, heightY, 1.4),
+          this.materials.caseBlack
+        );
+        rearTopSection.position.set(rearX, heightY / 2, -lengthZ / 2 + 0.7);
+        this.group.add(rearTopSection);
+
+        // 2. Pelat di atas lubang Rear I/O Motherboard
+        const ioTopHeader = new THREE.Mesh(
+          new THREE.BoxGeometry(0.44, heightY - 2.9, 14.2),
+          this.materials.caseBlack
+        );
+        ioTopHeader.position.set(rearX, 2.9 + (heightY - 2.9) / 2, -13.0);
+        this.group.add(ioTopHeader);
+
+        // 3. Bagian tengah panel belakang (area ekspansi slot PCIe GPU & motherboard)
+        const rearMidSection = new THREE.Mesh(
+          new THREE.BoxGeometry(0.44, heightY, 17.2),
+          this.materials.caseBlack
+        );
+        rearMidSection.position.set(rearX, heightY / 2, 2.7);
+        rearMidSection.castShadow = true;
+        this.group.add(rearMidSection);
+
+        // 7 Penutup Slot Ekspansi PCIe
+        for (let s = 0; s < 7; s++) {
+          const slotCover = new THREE.Mesh(
+            new THREE.BoxGeometry(0.50, 4.6, 0.55),
+            this.materials.steelInner
+          );
+          slotCover.position.set(rearX - 0.04, 3.4, -4.6 + s * 1.45);
+          this.group.add(slotCover);
+        }
+
+        // 4. Penutup sudut paling bawah (+Z) setelah ruang PSU
+        const rearBotCorner = new THREE.Mesh(
+          new THREE.BoxGeometry(0.44, heightY, 0.9),
+          this.materials.caseBlack
+        );
+        rearBotCorner.position.set(rearX, heightY / 2, lengthZ / 2 - 0.45);
+        this.group.add(rearBotCorner);
+
+        // 5. Pelat atas di atas bukaan PSU belakang
+        const psuBayZ = 15.8;
+        const psuBayBottomY = 0.32;
+        const psuH = 6.2;
+        const psuW = 8.6;
+
+        const rearAbovePSU = new THREE.Mesh(
+          new THREE.BoxGeometry(0.44, heightY - (psuBayBottomY + psuH), psuW + 0.8),
+          this.materials.caseBlack
+        );
+        rearAbovePSU.position.set(
+          rearX,
+          psuBayBottomY + psuH + (heightY - (psuBayBottomY + psuH)) / 2,
+          psuBayZ
+        );
+        this.group.add(rearAbovePSU);
+
+        // 6. Braket Bingkai Logam & 4 Kuping Lubang Baut pada Bukaan Ruang PSU Belakang
+        const frameThick = 0.32;
+        const frameDepth = 0.16;
+
+        const leftPost = new THREE.Mesh(
+          new THREE.BoxGeometry(frameDepth, psuH + frameThick * 2, frameThick),
+          this.materials.steelInner
+        );
+        leftPost.position.set(rearX - 0.12, psuBayBottomY + psuH / 2, psuBayZ - psuW / 2 - frameThick / 2);
+
+        const rightPost = new THREE.Mesh(
+          new THREE.BoxGeometry(frameDepth, psuH + frameThick * 2, frameThick),
+          this.materials.steelInner
+        );
+        rightPost.position.set(rearX - 0.12, psuBayBottomY + psuH / 2, psuBayZ + psuW / 2 + frameThick / 2);
+
+        const topBar = new THREE.Mesh(
+          new THREE.BoxGeometry(frameDepth, frameThick, psuW + frameThick * 2),
+          this.materials.steelInner
+        );
+        topBar.position.set(rearX - 0.12, psuBayBottomY + psuH + frameThick / 2, psuBayZ);
+
+        const botBar = new THREE.Mesh(
+          new THREE.BoxGeometry(frameDepth, frameThick, psuW + frameThick * 2),
+          this.materials.steelInner
+        );
+        botBar.position.set(rearX - 0.12, psuBayBottomY - frameThick / 2, psuBayZ);
+
+        this.group.add(leftPost, rightPost, topBar, botBar);
+        this.psuBracketClickMeshes.push(leftPost, rightPost, topBar, botBar);
+
+        // 4 Kuping / Tab Lubang Baut PSU pada Keempat Sudut Braket Belakang Casing
+        const holeMat = new THREE.MeshBasicMaterial({ color: '#030712' });
+        const screwMountCoords = [
+          [psuBayBottomY + psuH - 0.65, psuBayZ - psuW / 2 + 0.65],
+          [psuBayBottomY + psuH - 0.65, psuBayZ + psuW / 2 - 0.65],
+          [psuBayBottomY + 0.65,        psuBayZ - psuW / 2 + 0.65],
+          [psuBayBottomY + 0.65,        psuBayZ + psuW / 2 - 0.65]
+        ];
+
+        screwMountCoords.forEach(([sy, sz]) => {
+          const earTab = new THREE.Mesh(
+            new THREE.BoxGeometry(0.18, 1.05, 1.05),
+            this.materials.steelInner
+          );
+          earTab.position.set(rearX - 0.14, sy, sz);
+
+          const screwRing = new THREE.Mesh(
+            new THREE.RingGeometry(0.16, 0.30, 20),
+            this.materials.brassStandoff
+          );
+          screwRing.rotation.y = -Math.PI / 2;
+          screwRing.position.set(rearX - 0.235, sy, sz);
+
+          const screwHole = new THREE.Mesh(
+            new THREE.CircleGeometry(0.16, 16),
+            holeMat
+          );
+          screwHole.rotation.y = -Math.PI / 2;
+          screwHole.position.set(rearX - 0.238, sy, sz);
+
+          this.group.add(earTab, screwRing, screwHole);
+          this.psuBracketClickMeshes.push(earTab, screwRing, screwHole);
+        });
+
+        // Bingkai panduan pemasangan PSU di dalam kompartemen bawah
+        this.psuGuideBox = new THREE.LineSegments(
+          new THREE.EdgesGeometry(new THREE.BoxGeometry(12.2, 6.4, 9.0)),
+          new THREE.LineBasicMaterial({ color: '#38bdf8', transparent: true, opacity: 0.0 })
+        );
+        this.psuGuideBox.position.set(this.psuLocalAnchor.x, this.psuLocalAnchor.y + 3.1, this.psuLocalAnchor.z);
+        this.group.add(this.psuGuideBox);
+      }
+
+      update(dt) {
+        if (this.isSystemPowered) {
+          this.caseFans.forEach((rotor) => {
+            rotor.rotation.x += dt * 12.0;
+          });
+        }
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 5. MODEL 3D MEJA KERJA TEKNISI & TRAY KOMPONEN (ESD WORKBENCH)
+     * ============================================================================
+     */
+    class WorkbenchTable3D {
+      constructor(mbTrayPos, psuTrayPos) {
+        this.group = new THREE.Group();
+        this.group.name = 'Technician_Workbench_Table';
+
+        const woodMat = new THREE.MeshStandardMaterial({
+          color: '#2b2118',
+          roughness: 0.65,
+          metalness: 0.08
+        });
+        const trimMat = new THREE.MeshStandardMaterial({
+          color: '#18181b',
+          roughness: 0.5,
+          metalness: 0.4
+        });
+        const steelLegMat = new THREE.MeshStandardMaterial({
+          color: '#1e293b',
+          roughness: 0.35,
+          metalness: 0.8
+        });
+        const esdTex = ProceduralTextures.createESDMatTexture();
+        const esdMat = new THREE.MeshStandardMaterial({
+          map: esdTex,
+          roughness: 0.78,
+          metalness: 0.05
+        });
+
+        // Daun Meja Utama yang Luas (96 x 74, permukaan atas di Y = 0)
+        const tableTop = new THREE.Mesh(
+          new THREE.BoxGeometry(96, 1.8, 74),
+          woodMat
+        );
+        tableTop.position.set(0, -0.92, 0);
+        tableTop.receiveShadow = true;
+        this.group.add(tableTop);
+
+        const edgeRim = new THREE.Mesh(
+          new THREE.BoxGeometry(96.6, 1.85, 74.6),
+          trimMat
+        );
+        edgeRim.position.set(0, -0.94, 0);
+        this.group.add(edgeRim);
+
+        // Matras Anti-Statis (ESD Mat) Luas di atas meja (88 x 66)
+        const esdPad = new THREE.Mesh(
+          new THREE.BoxGeometry(88, 0.04, 66),
+          esdMat
+        );
+        esdPad.position.set(0, -0.01, 0);
+        esdPad.receiveShadow = true;
+        this.group.add(esdPad);
+
+        // Rangka Penguat & 4 Kaki Baja Meja Kerja
+        const legGeo = new THREE.BoxGeometry(2.2, 24, 2.2);
+        [
+          [-43.5, -13.6, -32.5],
+          [ 43.5, -13.6, -32.5],
+          [-43.5, -13.6,  32.5],
+          [ 43.5, -13.6,  32.5]
+        ].forEach(([lx, ly, lz]) => {
+          const leg = new THREE.Mesh(legGeo, steelLegMat);
+          leg.position.set(lx, ly, lz);
+          this.group.add(leg);
+        });
+
+        // Tray 1 (Kanan Atas): Dudukan Motherboard Lengkap (32 x 32 agar seluruh orientasi muat lega)
+        this.group.add(this._createESDTray(mbTrayPos.x, mbTrayPos.z, 32.0, 32.0));
+
+        // Tray 2 (Kanan Bawah): Dudukan PSU & Kabel Modular (24 x 18)
+        this.group.add(this._createESDTray(psuTrayPos.x, psuTrayPos.z, 24.0, 18.0));
+      }
+
+      _createESDTray(x, z, w, d) {
+        const trayGroup = new THREE.Group();
+        trayGroup.position.set(x, 0.01, z);
+
+        const trayOuter = new THREE.Mesh(
+          new THREE.BoxGeometry(w, 0.16, d),
+          new THREE.MeshStandardMaterial({ color: '#0f172a', roughness: 0.5, metalness: 0.2 })
+        );
+        trayOuter.position.y = 0.08;
+        trayOuter.receiveShadow = true;
+        trayOuter.castShadow = true;
+
+        const trayInnerBed = new THREE.Mesh(
+          new THREE.BoxGeometry(w - 0.9, 0.05, d - 0.9),
+          new THREE.MeshStandardMaterial({ color: '#1e293b', roughness: 0.7 })
+        );
+        trayInnerBed.position.y = 0.17;
+
+        const trayBorder = new THREE.LineSegments(
+          new THREE.EdgesGeometry(new THREE.BoxGeometry(w + 0.06, 0.18, d + 0.06)),
+          new THREE.LineBasicMaterial({ color: '#38bdf8' })
+        );
+        trayBorder.position.y = 0.09;
+
+        trayGroup.add(trayOuter, trayInnerBed, trayBorder);
+        return trayGroup;
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 6. LOGIKA UTAMA SIMULASI INTERAKTIF
+     * ============================================================================
+     */
+    function initSimulation() {
+      const container = document.getElementById('canvas-container');
+      if (!container) return;
+
+      if (typeof THREE === 'undefined') {
+        container.innerHTML = '<div class="flex items-center justify-center h-full p-6 text-center text-xs text-amber-300">Gagal memuat pustaka 3D (Three.js). Periksa koneksi internet lalu muat ulang halaman.</div>';
+        return;
+      }
+
+      try {
+        const getViewportSize = () => {
+          const rect = container.getBoundingClientRect();
+          const w = Math.max(10, Math.round(rect.width || container.clientWidth || window.innerWidth || 800));
+          const h = Math.max(10, Math.round(rect.height || container.clientHeight || window.innerHeight || 600));
+          return { w, h };
+        };
+
+        const initialSize = getViewportSize();
+
+        // Scene & Kamera
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color('#090d16');
+
+        const camera = new THREE.PerspectiveCamera(
+          42,
+          initialSize.w / initialSize.h,
+          0.1,
+          260
+        );
+
+        const renderer = new THREE.WebGLRenderer({
+          antialias: true,
+          preserveDrawingBuffer: true,
+          powerPreference: 'high-performance'
+        });
+        renderer.setSize(initialSize.w, initialSize.h, false);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        container.innerHTML = '';
+        container.appendChild(renderer.domElement);
+
+        // Pencahayaan Studio Bengkel Teknisi
+        const hemiLight = new THREE.HemisphereLight('#f1f5f9', '#1e293b', 0.92);
+        hemiLight.position.set(0, 42, 0);
+        scene.add(hemiLight);
+
+        const dirLight = new THREE.DirectionalLight('#ffffff', 1.15);
+        dirLight.position.set(28, 44, 30);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.near = 2;
+        dirLight.shadow.camera.far = 140;
+        const shadowBound = 54;
+        dirLight.shadow.camera.left = -shadowBound;
+        dirLight.shadow.camera.right = shadowBound;
+        dirLight.shadow.camera.top = shadowBound;
+        dirLight.shadow.camera.bottom = -shadowBound;
+        dirLight.shadow.bias = -0.0005;
+        scene.add(dirLight);
+
+        const rimLight = new THREE.DirectionalLight('#38bdf8', 0.42);
+        rimLight.position.set(-34, 24, -30);
+        scene.add(rimLight);
+
+        // Koordinat World Casing & Tray Komponen di atas Meja Kerja yang Diperluas
+        const caseWorldPos = new THREE.Vector3(-16.5, 0, 0.5);
+        const mbTrayWorldPos = new THREE.Vector3(22.5, 0.22, -14.5);
+        const psuTrayWorldPos = new THREE.Vector3(22.5, 0.22, 16.5);
+
+        const workbench = new WorkbenchTable3D(mbTrayWorldPos, psuTrayWorldPos);
+        scene.add(workbench.group);
+
+        const pcCase = new PCCasing3D();
+        pcCase.group.position.copy(caseWorldPos);
+        scene.add(pcCase.group);
+
+        const motherboard = new MotherboardComplete3D();
+        scene.add(motherboard.group);
+
+        const psu = new PowerSupply3D();
+        scene.add(psu.group);
+
+        // Target koordinat world terpasang di dalam casing
+        const mbInstalledWorldPos = caseWorldPos.clone().add(pcCase.mbLocalAnchor);
+        const psuInstalledWorldPos = caseWorldPos.clone().add(pcCase.psuLocalAnchor);
+
+        // Bayangan pemandu saat komponen di-drag di atas casing
+        const dragShadowMesh = new THREE.Mesh(
+          new THREE.PlaneGeometry(24.4, 30.5),
+          new THREE.MeshBasicMaterial({
+            color: '#38bdf8',
+            transparent: true,
+            opacity: 0.0,
+            depthWrite: false
+          })
+        );
+        dragShadowMesh.rotation.x = -Math.PI / 2;
+        dragShadowMesh.position.y = 9.4;
+        scene.add(dragShadowMesh);
+
+        // ======================================================================
+        // KONTROL KAMERA PRESET & PARALAKS KURSOR (X, Y SAJA, Z TETAP)
+        // ======================================================================
+        const camState = {
+          target: new THREE.Vector3(1.5, 1.5, 0.5),
+          desiredTarget: new THREE.Vector3(1.5, 1.5, 0.5),
+          radius: 74,
+          desiredRadius: 74,
+          theta: 0.14,
+          desiredTheta: 0.14,
+          phi: 0.72,
+          desiredPhi: 0.72,
+          cursorNormX: 0,
+          cursorNormY: 0,
+          cursorOffsetX: 0,
+          cursorOffsetY: 0
+        };
+
+        const cameraPresets = {
+          workbench:       { target: [1.5, 1.5, 0.5], radius: 74, theta: 0.14, phi: 0.72 },
+          caseMotherboard: { target: [mbInstalledWorldPos.x, 1.8, mbInstalledWorldPos.z], radius: 32, theta: 0.16, phi: 0.65 },
+          // Mengarah langsung ke panel belakang casing bagian bawah (-X, +Z) untuk melihat PSU & 4 baut pengunci
+          casePSU:         { target: [caseWorldPos.x - 13.8, 3.4, psuInstalledWorldPos.z], radius: 15.5, theta: -1.28, phi: 1.15 },
+          topDown:         { target: [1.5, 1.0, 0.5], radius: 72, theta: 0.0, phi: 0.12 }
+        };
+
+        function applyCameraPreset(name) {
+          const p = cameraPresets[name];
+          if (!p) return;
+          camState.desiredTarget.set(p.target[0], p.target[1], p.target[2]);
+          camState.desiredRadius = p.radius;
+          camState.desiredTheta = p.theta;
+          camState.desiredPhi = p.phi;
+
+          document.querySelectorAll('.cam-btn').forEach((btn) => {
+            if (btn.dataset.cam === name) {
+              btn.className = 'cam-btn bg-sky-600 text-white border border-sky-400/60 px-2.5 py-1.5 rounded-xl text-xs font-medium shadow-md transition hover:bg-sky-500 active:scale-95';
+            } else {
+              btn.className = 'cam-btn bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 px-2.5 py-1.5 rounded-xl text-xs font-medium backdrop-blur-md shadow-md transition active:scale-95';
+            }
+          });
+        }
+
+        document.querySelectorAll('.cam-btn').forEach((btn) => {
+          btn.addEventListener('click', () => applyCameraPreset(btn.dataset.cam));
+        });
+
+        container.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          const zoomStep = e.deltaY * 0.025;
+          camState.desiredRadius = Math.max(11, Math.min(96, camState.desiredRadius + zoomStep));
+        }, { passive: false });
+
+        // ======================================================================
+        // STATE PERAKITAN MOTHERBOARD & PSU KE DALAM CASING
+        // ======================================================================
+        const simState = {
+          selectedItem: 'mb', // 'mb' | 'psu'
+          mbRotationStep: 1,  // 0 = 0° (Rear I/O di kiri -X), 1 = 90°, 2 = 180°, 3 = 270°
+          mbTargetRotY: -Math.PI / 2,
+          mbInstalled: false,
+          mbScrewsLocked: false,
+          isDraggingMB: false,
+          mbTargetPos: new THREE.Vector3(),
+
+          psuRotationStep: 1, // 0 = 0° (Saklar AC di kiri -X, kabel di kanan +X)
+          psuTargetRotY: -Math.PI / 2,
+          psuInstalled: false,
+          psuScrewsLocked: false,
+          isDraggingPSU: false,
+          psuTargetPos: new THREE.Vector3(),
+
+          completed: false,
+          countdownTimer: null
+        };
+
+        function resetItemsToTrays() {
+          simState.mbTargetPos.set(mbTrayWorldPos.x, 0.42, mbTrayWorldPos.z);
+          motherboard.group.position.copy(simState.mbTargetPos);
+          motherboard.group.rotation.y = simState.mbTargetRotY;
+
+          simState.psuTargetPos.set(psuTrayWorldPos.x - 1.5, 0.22, psuTrayWorldPos.z);
+          psu.group.position.copy(simState.psuTargetPos);
+          psu.group.rotation.y = simState.psuTargetRotY;
+        }
+        resetItemsToTrays();
+
+        function setSelectedItem(item) {
+          simState.selectedItem = item;
+          const isMB = item === 'mb';
+          motherboard.setSelected(isMB && !simState.mbInstalled);
+          psu.setSelected(!isMB && !simState.psuInstalled);
+
+          const btnMB = document.getElementById('btn-select-mb');
+          const dotMB = document.getElementById('dot-select-mb');
+          const btnPSU = document.getElementById('btn-select-psu');
+          const dotPSU = document.getElementById('dot-select-psu');
+
+          if (isMB) {
+            btnMB.className = 'flex items-center justify-between px-2.5 py-2 rounded-xl bg-amber-500/20 border border-amber-400/70 text-amber-200 text-[11px] font-bold transition active:scale-95 shadow-sm';
+            dotMB.className = 'w-2 h-2 rounded-full bg-amber-400 shrink-0';
+            btnPSU.className = 'flex items-center justify-between px-2.5 py-2 rounded-xl bg-slate-950/80 hover:bg-amber-500/10 border border-amber-400/30 text-slate-300 text-[11px] font-semibold transition active:scale-95';
+            dotPSU.className = 'w-2 h-2 rounded-full bg-slate-600 shrink-0';
+          } else {
+            btnMB.className = 'flex items-center justify-between px-2.5 py-2 rounded-xl bg-slate-950/80 hover:bg-amber-500/10 border border-amber-400/30 text-slate-300 text-[11px] font-semibold transition active:scale-95';
+            dotMB.className = 'w-2 h-2 rounded-full bg-slate-600 shrink-0';
+            btnPSU.className = 'flex items-center justify-between px-2.5 py-2 rounded-xl bg-amber-500/20 border border-amber-400/70 text-amber-200 text-[11px] font-bold transition active:scale-95 shadow-sm';
+            dotPSU.className = 'w-2 h-2 rounded-full bg-amber-400 shrink-0';
+          }
+          updateSimulationUI();
+        }
+
+        document.getElementById('btn-select-mb').addEventListener('click', () => setSelectedItem('mb'));
+        document.getElementById('btn-select-psu').addEventListener('click', () => setSelectedItem('psu'));
+
+        // ======================================================================
+        // TOAST FEEDBACK & SINKRONISASI UI LANGKAH
+        // ======================================================================
+        let toastTimeout = null;
+        function showFeedback(title, msg, type = 'info') {
+          const toast = document.getElementById('feedback-toast');
+          const dot = document.getElementById('toast-dot');
+          const tTitle = document.getElementById('toast-title');
+          const tMsg = document.getElementById('toast-msg');
+
+          tTitle.textContent = title;
+          tMsg.textContent = msg;
+
+          if (type === 'warn') {
+            toast.className = 'pointer-events-none absolute top-24 sm:top-4 right-3 sm:right-4 max-w-xs sm:max-w-sm bg-slate-900/95 border border-amber-500/60 text-slate-100 px-3.5 py-2.5 rounded-xl shadow-2xl backdrop-blur-md transition-all duration-300 opacity-100 translate-y-0 z-20';
+            dot.className = 'mt-1 w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0';
+            tTitle.className = 'text-xs font-semibold text-amber-300';
+          } else if (type === 'success') {
+            toast.className = 'pointer-events-none absolute top-24 sm:top-4 right-3 sm:right-4 max-w-xs sm:max-w-sm bg-slate-900/95 border border-emerald-500/60 text-slate-100 px-3.5 py-2.5 rounded-xl shadow-2xl backdrop-blur-md transition-all duration-300 opacity-100 translate-y-0 z-20';
+            dot.className = 'mt-1 w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0';
+            tTitle.className = 'text-xs font-semibold text-emerald-300';
+          } else {
+            toast.className = 'pointer-events-none absolute top-24 sm:top-4 right-3 sm:right-4 max-w-xs sm:max-w-sm bg-slate-900/95 border border-sky-500/50 text-slate-100 px-3.5 py-2.5 rounded-xl shadow-2xl backdrop-blur-md transition-all duration-300 opacity-100 translate-y-0 z-20';
+            dot.className = 'mt-1 w-2.5 h-2.5 rounded-full bg-sky-400 shrink-0';
+            tTitle.className = 'text-xs font-semibold text-sky-300';
+          }
+
+          clearTimeout(toastTimeout);
+          toastTimeout = setTimeout(() => {
+            toast.classList.remove('opacity-100', 'translate-y-0');
+            toast.classList.add('opacity-0', '-translate-y-2');
+          }, 3400);
+        }
+
+        function getCurrentStepIndex() {
+          if (!simState.mbInstalled) return 1;
+          if (!simState.mbScrewsLocked) return 2;
+          if (!simState.psuInstalled) return 3;
+          if (!simState.psuScrewsLocked) return 4;
+          return 5;
+        }
+
+        function updateSimulationUI() {
+          const step = getCurrentStepIndex();
+          const completedCount = Math.min(4, step - 1);
+          document.getElementById('step-progress-text').textContent = `${completedCount} / 4`;
+
+          const isMBSelected = simState.selectedItem === 'mb';
+          const rotStep = isMBSelected ? simState.mbRotationStep : simState.psuRotationStep;
+          const angleDeg = (rotStep % 4) * 90;
+          const isAligned = angleDeg === 0;
+
+          document.getElementById('orientation-label').textContent = isMBSelected
+            ? 'Sudut Rear I/O Motherboard:'
+            : 'Sudut Saklar & Kabel PSU:';
+
+          const angleBadge = document.getElementById('component-angle-badge');
+          const isInstalled = isMBSelected ? simState.mbInstalled : simState.psuInstalled;
+          if (isInstalled) {
+            angleBadge.textContent = isMBSelected ? 'Terpasang (9 Baut)' : 'Terpasang (4 Baut)';
+            angleBadge.className = 'text-[11px] px-2.5 py-0.5 rounded-full font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+          } else if (isAligned) {
+            angleBadge.textContent = '0° (Sejajar Casing)';
+            angleBadge.className = 'text-[11px] px-2.5 py-0.5 rounded-full font-bold bg-emerald-400 text-slate-950 border border-emerald-300 shadow-sm';
+          } else {
+            angleBadge.textContent = `${angleDeg}° (Belum Sejajar)`;
+            angleBadge.className = 'text-[11px] px-2.5 py-0.5 rounded-full font-bold bg-amber-400 text-slate-950 border border-amber-300 shadow-sm';
+          }
+
+          document.getElementById('diagram-title').textContent = isMBSelected
+            ? 'Penyelarasan Rear I/O'
+            : 'Penyelarasan Panel AC PSU';
+
+          document.getElementById('diagram-desc').innerHTML = isMBSelected
+            ? 'Putar Motherboard hingga panel <span class="text-amber-300 font-semibold">Rear I/O</span> menghadap ke <span class="text-slate-200 font-medium">kiri</span> menuju lubang belakang casing.'
+            : 'Putar PSU hingga <span class="text-amber-300 font-semibold">Saklar AC</span> menghadap ke <span class="text-slate-200 font-medium">kiri</span> dan <span class="text-sky-300 font-medium">Kabel</span> ke kanan.';
+
+          const itemVisual = document.getElementById('orientation-item-visual');
+          const itemText = document.getElementById('orientation-item-text');
+          if (itemVisual && itemText) {
+            itemVisual.style.transform = `rotate(${angleDeg}deg)`;
+            itemText.textContent = isMBSelected ? 'ATX' : 'PSU';
+          }
+
+          const isCurrentInstalled = isMBSelected ? simState.mbInstalled : simState.psuInstalled;
+          document.getElementById('btn-rotate-ccw').disabled = isCurrentInstalled;
+          document.getElementById('btn-rotate-cw').disabled = isCurrentInstalled;
+
+          motherboard.setSelected(isMBSelected && !simState.mbInstalled);
+          psu.setSelected(!isMBSelected && !simState.psuInstalled);
+
+          const stepHints = {
+            1: 'Langkah 1: Putar Motherboard ke 0° (Rear I/O di kiri), lalu drag ke tray casing.',
+            2: 'Langkah 2: Klik pada Motherboard di dalam casing untuk mengencangkan 9 baut standoff.',
+            3: 'Langkah 3: Putar PSU ke 0° (saklar AC di kiri, kabel di kanan), lalu drag ke ruang PSU.',
+            4: 'Langkah 4: Klik pada PSU atau braket lubang baut di belakang casing untuk mengunci 4 sekrup.',
+            5: 'Selesai! Motherboard & PSU terpasang kokoh di dalam casing.'
+          };
+          document.getElementById('live-instruction-text').textContent = stepHints[step] || stepHints[5];
+
+          for (let i = 1; i <= 4; i++) {
+            const item = document.getElementById(`step-item-${i}`);
+            const badge = item.querySelector('.step-badge');
+            if (i < step) {
+              item.className = 'flex items-start gap-2.5 p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200';
+              badge.className = 'step-badge w-5 h-5 rounded-full bg-emerald-500 text-slate-950 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5';
+              badge.textContent = '✓';
+            } else if (i === step) {
+              item.className = 'flex items-start gap-2.5 p-2 rounded-xl bg-sky-500/15 border border-sky-500/50 text-slate-100';
+              badge.className = 'step-badge w-5 h-5 rounded-full bg-sky-400 text-slate-950 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5';
+              badge.textContent = String(i);
+            } else {
+              item.className = 'flex items-start gap-2.5 p-2 rounded-xl bg-slate-950/70 border border-slate-800 text-slate-400';
+              badge.className = 'step-badge w-5 h-5 rounded-full bg-slate-800 text-slate-400 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5';
+              badge.textContent = String(i);
+            }
+          }
+        }
+
+        // ======================================================================
+        // KONTROL TUTUP / BUKA PANEL PROSEDUR PERAKITAN
+        // ======================================================================
+        const toggleProcBtn = document.getElementById('btn-toggle-procedure');
+        const procContent = document.getElementById('procedure-content');
+        const procChevron = document.getElementById('procedure-chevron');
+        if (toggleProcBtn && procContent && procChevron) {
+          toggleProcBtn.addEventListener('click', () => {
+            const isHidden = procContent.classList.toggle('hidden');
+            toggleProcBtn.setAttribute('aria-expanded', String(!isHidden));
+            procChevron.style.transform = isHidden ? 'rotate(-90deg)' : 'rotate(0deg)';
+          });
+        }
+
+        // ======================================================================
+        // KONTROL ORIENTASI KOMPONEN AKTIF (Q / E ATAU TOMBOL UI)
+        // ======================================================================
+        function rotateActiveComponent(deltaSteps) {
+          if (simState.selectedItem === 'mb') {
+            if (simState.mbInstalled) {
+              showFeedback('Motherboard Sudah Terpasang', 'Motherboard sudah terpasang di dalam casing.', 'warn');
+              return;
+            }
+            simState.mbRotationStep = (simState.mbRotationStep + deltaSteps + 4) % 4;
+            simState.mbTargetRotY = -simState.mbRotationStep * (Math.PI / 2);
+            const deg = simState.mbRotationStep * 90;
+            if (deg === 0) {
+              showFeedback('Orientasi Motherboard 0°', 'Panel Rear I/O kini menghadap ke kiri sejajar lubang belakang casing!', 'success');
+            } else {
+              showFeedback(`Orientasi Motherboard: ${deg}°`, 'Putar ke 0° agar panel Rear I/O menghadap ke kiri.', 'info');
+            }
+          } else {
+            if (simState.psuInstalled) {
+              showFeedback('PSU Sudah Terpasang', 'Unit PSU sudah masuk di kompartemen casing.', 'warn');
+              return;
+            }
+            simState.psuRotationStep = (simState.psuRotationStep + deltaSteps + 4) % 4;
+            simState.psuTargetRotY = -simState.psuRotationStep * (Math.PI / 2);
+            const deg = simState.psuRotationStep * 90;
+            if (deg === 0) {
+              showFeedback('Orientasi PSU 0°', 'Saklar AC menghadap ke kiri (panel belakang) dan kabel ke kanan!', 'success');
+            } else {
+              showFeedback(`Orientasi PSU: ${deg}°`, 'Putar ke 0° agar saklar AC menghadap ke kiri dan kabel ke kanan.', 'info');
+            }
+          }
+          updateSimulationUI();
+        }
+
+        document.getElementById('btn-rotate-ccw').addEventListener('click', () => rotateActiveComponent(-1));
+        document.getElementById('btn-rotate-cw').addEventListener('click', () => rotateActiveComponent(1));
+
+        window.addEventListener('keydown', (e) => {
+          if (e.key === 'q' || e.key === 'Q') rotateActiveComponent(-1);
+          if (e.key === 'e' || e.key === 'E') rotateActiveComponent(1);
+        });
+
+        // ======================================================================
+        // ALUR PENYELESAIAN 3 DETIK SETELAH 4 BAUT PSU DIKENCANGKAN
+        // ======================================================================
+        function triggerCompletionSequence() {
+          if (simState.completed) return;
+          simState.completed = true;
+
+          const banner = document.getElementById('countdown-banner');
+          const numEl = document.getElementById('countdown-number');
+          banner.classList.remove('hidden');
+
+          let remaining = 3;
+          numEl.textContent = String(remaining);
+
+          clearInterval(simState.countdownTimer);
+          simState.countdownTimer = setInterval(() => {
+            remaining -= 1;
+            if (remaining > 0) {
+              numEl.textContent = String(remaining);
+            } else {
+              clearInterval(simState.countdownTimer);
+              banner.classList.add('hidden');
+              document.getElementById('choice-modal').classList.remove('hidden');
+            }
+          }, 1000);
+        }
+
+        // ======================================================================
+        // INTERAKSI MOUSE / SENTUH: DRAG MB & PSU + KLIK PENGENCANG BAUT
+        // ======================================================================
+        const raycaster = new THREE.Raycaster();
+        const pointerNDC = new THREE.Vector2();
+        const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -10.5);
+        const planeIntersectPt = new THREE.Vector3();
+
+        let isPointerDown = false;
+        let pointerButton = 0;
+        let lastX = 0;
+        let lastY = 0;
+        let movedDistance = 0;
+
+        function updateNDC(clientX, clientY) {
+          const rect = renderer.domElement.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) {
+            pointerNDC.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+            pointerNDC.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+          }
+        }
+
+        // Pelacakan lokasi kursor pada layar untuk menggeser POV (koordinat X & Y saja, Z tetap)
+        window.addEventListener('mousemove', (e) => {
+          const winW = Math.max(1, window.innerWidth);
+          const winH = Math.max(1, window.innerHeight);
+          camState.cursorNormX = Math.max(-1, Math.min(1, (e.clientX / winW) * 2 - 1));
+          camState.cursorNormY = Math.max(-1, Math.min(1, -((e.clientY / winH) * 2 - 1)));
+
+          if (!isPointerDown && !simState.isDraggingMB && !simState.isDraggingPSU) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+              updateNDC(e.clientX, e.clientY);
+              raycaster.setFromCamera(pointerNDC, camera);
+              const overUninstalledMB = !simState.mbInstalled && raycaster.intersectObjects(motherboard.draggableMeshes, false).length > 0;
+              const overUninstalledPSU = !simState.psuInstalled && raycaster.intersectObjects(psu.draggableMeshes, false).length > 0;
+              const overScrewableMB = simState.mbInstalled && !simState.mbScrewsLocked && raycaster.intersectObjects(motherboard.draggableMeshes, false).length > 0;
+              const overScrewablePSU = simState.psuInstalled && !simState.psuScrewsLocked && raycaster.intersectObjects([...psu.draggableMeshes, ...pcCase.psuBracketClickMeshes], false).length > 0;
+
+              if (overUninstalledMB || overUninstalledPSU) {
+                container.style.cursor = 'grab';
+              } else if (overScrewableMB || overScrewablePSU) {
+                container.style.cursor = 'pointer';
+              } else {
+                container.style.cursor = 'default';
+              }
+            }
+          }
+        });
+
+        container.addEventListener('mouseleave', () => {
+          camState.cursorNormX = 0;
+          camState.cursorNormY = 0;
+        });
+
+        function onPointerStart(clientX, clientY, button = 0) {
+          isPointerDown = true;
+          pointerButton = button;
+          lastX = clientX;
+          lastY = clientY;
+          movedDistance = 0;
+
+          if (button !== 0) return;
+
+          updateNDC(clientX, clientY);
+          raycaster.setFromCamera(pointerNDC, camera);
+
+          // 1. Cek Drag Motherboard (sebelum terpasang)
+          if (!simState.mbInstalled) {
+            const mbHits = raycaster.intersectObjects(motherboard.draggableMeshes, false);
+            if (mbHits.length > 0) {
+              setSelectedItem('mb');
+              simState.isDraggingMB = true;
+              simState.mbTargetPos.y = 10.2;
+              container.style.cursor = 'grabbing';
+              return;
+            }
+          }
+
+          // 2. Cek Drag PSU (sebelum terpasang)
+          if (!simState.psuInstalled) {
+            const psuHits = raycaster.intersectObjects(psu.draggableMeshes, false);
+            if (psuHits.length > 0) {
+              setSelectedItem('psu');
+              simState.isDraggingPSU = true;
+              simState.psuTargetPos.y = 10.2;
+              container.style.cursor = 'grabbing';
+              return;
+            }
+          }
+        }
+
+        function onPointerMove(clientX, clientY) {
+          if (!isPointerDown) return;
+
+          const dx = clientX - lastX;
+          const dy = clientY - lastY;
+          movedDistance += Math.hypot(dx, dy);
+          lastX = clientX;
+          lastY = clientY;
+
+          if (simState.isDraggingMB) {
+            updateNDC(clientX, clientY);
+            raycaster.setFromCamera(pointerNDC, camera);
+            if (raycaster.ray.intersectPlane(dragPlane, planeIntersectPt)) {
+              const clampedX = Math.max(-34, Math.min(34, planeIntersectPt.x));
+              const clampedZ = Math.max(-24, Math.min(24, planeIntersectPt.z));
+              simState.mbTargetPos.set(clampedX, 10.2, clampedZ);
+
+              const distToMBAnchor = Math.hypot(clampedX - mbInstalledWorldPos.x, clampedZ - mbInstalledWorldPos.z);
+              if (pcCase.mbGuideBox) {
+                const isReady = (simState.mbRotationStep % 4) === 0;
+                pcCase.mbGuideBox.material.color.set(isReady ? '#10b981' : '#f59e0b');
+                pcCase.mbGuideBox.material.opacity = distToMBAnchor < 9.5 ? 0.95 : 0.30;
+              }
+            }
+          } else if (simState.isDraggingPSU) {
+            updateNDC(clientX, clientY);
+            raycaster.setFromCamera(pointerNDC, camera);
+            if (raycaster.ray.intersectPlane(dragPlane, planeIntersectPt)) {
+              const clampedX = Math.max(-36, Math.min(36, planeIntersectPt.x));
+              const clampedZ = Math.max(-28, Math.min(28, planeIntersectPt.z));
+              simState.psuTargetPos.set(clampedX, 10.2, clampedZ);
+
+              const distToPSUAnchor = Math.hypot(clampedX - psuInstalledWorldPos.x, clampedZ - psuInstalledWorldPos.z);
+              if (pcCase.psuGuideBox) {
+                const isReady = simState.mbScrewsLocked && (simState.psuRotationStep % 4) === 0;
+                pcCase.psuGuideBox.material.color.set(isReady ? '#10b981' : '#f59e0b');
+                pcCase.psuGuideBox.material.opacity = distToPSUAnchor < 8.5 ? 0.95 : 0.30;
+              }
+            }
+          }
+        }
+
+        function onPointerEnd(clientX, clientY) {
+          // 1. Selesai Drag Motherboard
+          if (simState.isDraggingMB) {
+            simState.isDraggingMB = false;
+            container.style.cursor = 'default';
+            if (pcCase.mbGuideBox) pcCase.mbGuideBox.material.opacity = 0.0;
+
+            const distToMB = Math.hypot(
+              simState.mbTargetPos.x - mbInstalledWorldPos.x,
+              simState.mbTargetPos.z - mbInstalledWorldPos.z
+            );
+
+            if (distToMB < 7.5) {
+              if ((simState.mbRotationStep % 4) !== 0) {
+                showFeedback('Orientasi Motherboard Salah!', 'Putar Motherboard ke 0° agar panel Rear I/O menghadap ke kiri (lubang belakang casing)!', 'warn');
+                simState.mbTargetPos.set(mbTrayWorldPos.x, 0.42, mbTrayWorldPos.z);
+                isPointerDown = false;
+                return;
+              }
+
+              simState.mbInstalled = true;
+              simState.mbTargetPos.copy(mbInstalledWorldPos);
+              motherboard.setSelected(false);
+              showFeedback('Langkah 1 Selesai', 'Motherboard duduk di atas 9 standoff! Sekarang klik pada Motherboard di dalam casing untuk mengencangkan baut.', 'success');
+              updateSimulationUI();
+            } else {
+              simState.mbTargetPos.set(mbTrayWorldPos.x, 0.42, mbTrayWorldPos.z);
+            }
+            isPointerDown = false;
+            return;
+          }
+
+          // 2. Selesai Drag PSU
+          if (simState.isDraggingPSU) {
+            simState.isDraggingPSU = false;
+            container.style.cursor = 'default';
+            if (pcCase.psuGuideBox) pcCase.psuGuideBox.material.opacity = 0.0;
+
+            const distToPSU = Math.hypot(
+              simState.psuTargetPos.x - psuInstalledWorldPos.x,
+              simState.psuTargetPos.z - psuInstalledWorldPos.z
+            );
+
+            if (distToPSU < 7.5) {
+              if (!simState.mbInstalled || !simState.mbScrewsLocked) {
+                showFeedback('Selesaikan Motherboard Dahulu', 'Pasang dan kencangkan 9 baut Motherboard sebelum memasang PSU ke casing!', 'warn');
+                simState.psuTargetPos.set(psuTrayWorldPos.x - 1.5, 0.22, psuTrayWorldPos.z);
+                isPointerDown = false;
+                return;
+              }
+              if ((simState.psuRotationStep % 4) !== 0) {
+                showFeedback('Orientasi PSU Salah!', 'Putar PSU ke 0° agar saklar AC menghadap ke kiri (panel belakang casing) dan kabel ke kanan!', 'warn');
+                simState.psuTargetPos.set(psuTrayWorldPos.x - 1.5, 0.22, psuTrayWorldPos.z);
+                isPointerDown = false;
+                return;
+              }
+
+              simState.psuInstalled = true;
+              psu.isInstalledInCase = true;
+              simState.psuTargetPos.copy(psuInstalledWorldPos);
+              psu.setSelected(false);
+
+              // Rotasikan kamera otomatis ke panel belakang casing bagian bawah agar pemasangan 4 baut PSU terlihat jelas
+              applyCameraPreset('casePSU');
+
+              showFeedback('Langkah 3 Selesai', 'PSU masuk ke kompartemen bawah & kamera menyorot panel belakang! Klik PSU atau braket baut untuk mengunci 4 sekrup.', 'success');
+              updateSimulationUI();
+            } else {
+              simState.psuTargetPos.set(psuTrayWorldPos.x - 1.5, 0.22, psuTrayWorldPos.z);
+            }
+            isPointerDown = false;
+            return;
+          }
+
+          // 3. Deteksi Klik Pengencangan Baut (Langkah 2: 9 Baut MB, Langkah 4: 4 Baut PSU)
+          if (isPointerDown && movedDistance < 6 && pointerButton === 0) {
+            updateNDC(clientX, clientY);
+            raycaster.setFromCamera(pointerNDC, camera);
+
+            // Langkah 2: Klik Motherboard terpasang -> Kencangkan 9 Baut Standoff
+            if (simState.mbInstalled && !simState.mbScrewsLocked) {
+              const mbClickHits = raycaster.intersectObjects(motherboard.draggableMeshes, false);
+              if (mbClickHits.length > 0) {
+                simState.mbScrewsLocked = true;
+                motherboard.screwsTightened = true;
+                setSelectedItem('psu');
+                showFeedback('Langkah 2 Selesai', 'Ke-9 baut standoff Motherboard terkunci rapat! Sekarang putar PSU ke 0° dan drag ke ruang PSU bawah.', 'success');
+                updateSimulationUI();
+                isPointerDown = false;
+                return;
+              }
+            }
+
+            // Langkah 4: Klik PSU terpasang atau braket belakang casing -> Kencangkan 4 Baut Belakang PSU
+            if (simState.psuInstalled && !simState.psuScrewsLocked) {
+              const psuClickHits = raycaster.intersectObjects([...psu.draggableMeshes, ...pcCase.psuBracketClickMeshes], false);
+              if (psuClickHits.length > 0) {
+                simState.psuScrewsLocked = true;
+                psu.screwsTightened = true;
+                pcCase.isSystemPowered = true;
+                showFeedback('Pemasangan Sempurna!', 'Ke-4 baut belakang PSU terkunci rapat dan sistem casing siap dioperasikan!', 'success');
+                updateSimulationUI();
+                triggerCompletionSequence();
+                isPointerDown = false;
+                return;
+              }
+            }
+          }
+
+          isPointerDown = false;
+        }
+
+        container.addEventListener('contextmenu', (e) => e.preventDefault());
+        container.addEventListener('mousedown', (e) => onPointerStart(e.clientX, e.clientY, e.button));
+        window.addEventListener('mousemove', (e) => onPointerMove(e.clientX, e.clientY));
+        window.addEventListener('mouseup', (e) => onPointerEnd(e.clientX, e.clientY));
+
+        // Dukungan Touch Screen
+        container.addEventListener('touchstart', (e) => {
+          if (e.touches.length === 1) {
+            onPointerStart(e.touches[0].clientX, e.touches[0].clientY, 0);
+          }
+        }, { passive: true });
+
+        container.addEventListener('touchmove', (e) => {
+          if (e.touches.length === 1) {
+            onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
+          }
+        }, { passive: true });
+
+        container.addEventListener('touchend', (e) => {
+          if (e.changedTouches.length > 0) {
+            onPointerEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+          }
+        });
+
+        // ======================================================================
+        // RESET SIMULASI & TOMBOL MODAL AKHIR (3 DETIK SETELAH SELESAI)
+        // ======================================================================
+        function resetFullSimulation() {
+          clearInterval(simState.countdownTimer);
+
+          simState.mbRotationStep = 1;
+          simState.mbTargetRotY = -Math.PI / 2;
+          simState.mbInstalled = false;
+          simState.mbScrewsLocked = false;
+          simState.isDraggingMB = false;
+
+          simState.psuRotationStep = 1;
+          simState.psuTargetRotY = -Math.PI / 2;
+          simState.psuInstalled = false;
+          simState.psuScrewsLocked = false;
+          simState.isDraggingPSU = false;
+
+          simState.completed = false;
+
+          motherboard.screwsTightened = false;
+          psu.screwsTightened = false;
+          psu.isInstalledInCase = false;
+          pcCase.isSystemPowered = false;
+
+          resetItemsToTrays();
+          setSelectedItem('mb');
+
+          document.getElementById('countdown-banner').classList.add('hidden');
+          document.getElementById('choice-modal').classList.add('hidden');
+          document.getElementById('summary-modal').classList.add('hidden');
+          document.getElementById('inspect-mode-bar').classList.add('hidden');
+
+          applyCameraPreset('workbench');
+          updateSimulationUI();
+          showFeedback('Simulasi Direset', 'Casing, motherboard, dan PSU dikembalikan ke posisi awal di atas meja kerja.', 'info');
+        }
+
+        document.getElementById('btn-reset-sim').addEventListener('click', resetFullSimulation);
+        document.getElementById('btn-restart-sim').addEventListener('click', resetFullSimulation);
+
+        document.getElementById('btn-inspect-result').addEventListener('click', () => {
+          document.getElementById('choice-modal').classList.add('hidden');
+          document.getElementById('inspect-mode-bar').classList.remove('hidden');
+          applyCameraPreset('caseMotherboard');
+          showFeedback('Mode Inspeksi Hasil', 'Gunakan preset kamera atau geser kursor untuk memeriksa pemasangan motherboard & PSU di dalam casing.', 'info');
+        });
+
+        document.getElementById('btn-finish-game').addEventListener('click', () => {
+          document.getElementById('choice-modal').classList.add('hidden');
+          document.getElementById('inspect-mode-bar').classList.add('hidden');
+          document.getElementById('summary-modal').classList.remove('hidden');
+        });
+
+        document.getElementById('btn-finish-from-inspect').addEventListener('click', () => {
+          document.getElementById('inspect-mode-bar').classList.add('hidden');
+          document.getElementById('summary-modal').classList.remove('hidden');
+        });
+
+        const btnReview = document.getElementById('btn-review-from-summary');
+        if (btnReview) {
+          btnReview.addEventListener('click', () => {
+            document.getElementById('summary-modal').classList.add('hidden');
+            document.getElementById('inspect-mode-bar').classList.remove('hidden');
+          });
+        }
+
+        // ======================================================================
+        // RESIZE OBSERVER & WINDOW RESIZE
+        // ======================================================================
+        function handleViewportResize() {
+          const size = getViewportSize();
+          camera.aspect = size.w / size.h;
+          camera.updateProjectionMatrix();
+          renderer.setSize(size.w, size.h, false);
+        }
+
+        window.addEventListener('resize', handleViewportResize);
+        if (typeof ResizeObserver !== 'undefined') {
+          const ro = new ResizeObserver(() => handleViewportResize());
+          ro.observe(container);
+        }
+        requestAnimationFrame(handleViewportResize);
+        setTimeout(handleViewportResize, 120);
+
+        // ======================================================================
+        // LOOP RENDER & ANIMASI 60 FPS
+        // ======================================================================
+        let lastTime = performance.now();
+
+        function animate(now) {
+          requestAnimationFrame(animate);
+          const dt = Math.min(0.05, (now - lastTime) / 1000);
+          lastTime = now;
+
+          // 1. Interpolasi Kamera & Offset POV Kursor (Hanya Ubah Koordinat X & Y, Z Tetap)
+          const camLerp = Math.min(1, dt * 8);
+          camState.target.lerp(camState.desiredTarget, camLerp);
+          camState.radius += (camState.desiredRadius - camState.radius) * camLerp;
+          camState.theta += (camState.desiredTheta - camState.theta) * camLerp;
+          camState.phi += (camState.desiredPhi - camState.phi) * camLerp;
+
+          const parallaxScale = Math.max(2.0, camState.radius * 0.14);
+          const targetCursorX = camState.cursorNormX * parallaxScale;
+          const targetCursorY = camState.cursorNormY * (parallaxScale * 0.75);
+          camState.cursorOffsetX += (targetCursorX - camState.cursorOffsetX) * camLerp;
+          camState.cursorOffsetY += (targetCursorY - camState.cursorOffsetY) * camLerp;
+
+          const sinPhi = Math.sin(camState.phi);
+          const baseCamX = camState.target.x + camState.radius * sinPhi * Math.sin(camState.theta);
+          const baseCamY = camState.target.y + camState.radius * Math.cos(camState.phi);
+          const baseCamZ = camState.target.z + camState.radius * sinPhi * Math.cos(camState.theta);
+
+          camera.position.set(
+            baseCamX + camState.cursorOffsetX,
+            Math.max(2.5, baseCamY + camState.cursorOffsetY),
+            baseCamZ
+          );
+          camera.lookAt(
+            camState.target.x + camState.cursorOffsetX * 0.65,
+            camState.target.y + camState.cursorOffsetY * 0.65,
+            camState.target.z
+          );
+
+          // 2. Interpolasi Posisi & Orientasi Motherboard Lengkap
+          const objLerp = Math.min(1, dt * 14);
+          motherboard.group.position.lerp(simState.mbTargetPos, objLerp);
+          motherboard.group.rotation.y += (simState.mbTargetRotY - motherboard.group.rotation.y) * objLerp;
+          motherboard.update(dt);
+
+          // 3. Interpolasi Posisi & Orientasi PSU + Kabel
+          psu.group.position.lerp(simState.psuTargetPos, objLerp);
+          psu.group.rotation.y += (simState.psuTargetRotY - psu.group.rotation.y) * objLerp;
+          psu.update(dt);
+
+          // 4. Animasi Kipas Casing
+          pcCase.update(dt);
+
+          // Bayangan pemandu saat komponen di-drag
+          if (simState.isDraggingMB) {
+            dragShadowMesh.scale.set(1.0, 1.0, 1);
+            dragShadowMesh.rotation.z = motherboard.group.rotation.y;
+            dragShadowMesh.position.set(motherboard.group.position.x, 9.4, motherboard.group.position.z);
+            dragShadowMesh.material.opacity = 0.22;
+          } else if (simState.isDraggingPSU) {
+            dragShadowMesh.scale.set(0.48, 0.30, 1);
+            dragShadowMesh.rotation.z = psu.group.rotation.y;
+            dragShadowMesh.position.set(psu.group.position.x, 9.4, psu.group.position.z);
+            dragShadowMesh.material.opacity = 0.24;
+          } else {
+            dragShadowMesh.material.opacity = 0.0;
+          }
+
+          renderer.render(scene, camera);
+        }
+
+        setSelectedItem('mb');
+        updateSimulationUI();
+        requestAnimationFrame(animate);
+      } catch (err) {
+        console.error('Error initializing 3D simulation:', err);
+        container.innerHTML = `<div class="flex items-center justify-center h-full p-6 text-center text-xs text-rose-300">Terjadi kesalahan saat memuat tampilan 3D: ${err.message}</div>`;
+      }
+    }
+
+    if (document.readyState === 'complete') {
+      initSimulation();
+    } else {
+      window.addEventListener('load', initSimulation);
+    }
+  </script>
+</body>
+</html>
